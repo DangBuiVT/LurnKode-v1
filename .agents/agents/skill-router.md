@@ -85,3 +85,29 @@ Generic skill
 ```
 
 Project rules trong `.agents/rules/` luôn override external skills.
+
+---
+
+## Workflow Triggers (tự động load khi nhận từ khóa)
+
+| Từ khóa nhận được | Workflow file cần đọc |
+|---|---|
+| "build feature", "tạo feature", "implement", "plan", `/plan` | `rules/workflow-plan.md` |
+| "debug", "fix bug", "lỗi", "tại sao", `/debug` | `rules/workflow-debug.md` |
+| "viết test", "tdd", "thêm test", `/tdd-workflow` | `rules/workflow-tdd.md` |
+| "review code", "xem lại", "code review", `/code-review` | `rules/workflow-code-review.md` |
+
+> **Quan trọng**: `/code-review` review KHÔNG CHỈ uncommitted changes — review cả files user đề cập trực tiếp và files liên quan trong conversation.
+
+## Tech Stack Reference (đã xác nhận)
+
+```
+Backend  : Bun + ElysiaJS (TypeScript) ✅
+Database : Supabase (PostgreSQL + pgvector) ✅
+Queue    : Redis + BullMQ ✅
+Judge    : Judge0 (self-hosted Docker) ✅
+Git      : Feature branch workflow ✅
+Frontend : TBD (Next.js App Router được đề xuất) ⏳
+LLM      : TBD (Gemini vs GPT-4o-mini) ⏳
+Deploy   : Docker local → Railway ⏳
+```

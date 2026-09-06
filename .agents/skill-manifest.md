@@ -180,8 +180,9 @@
 ### Backend Domain
 | Skill | Path | Reason |
 |---|---|---|
-| `fastapi` | `backend/fastapi/` | FastAPI + Pydantic patterns (Python stack option) |
-| `elysiajs` | `backend/elysiajs/` | Bun + Elysia patterns (Node stack option) |
+| `elysiajs` | `backend/elysiajs/` | **PRIMARY** — Bun + Elysia patterns (stack đã xác nhận) |
+
+> ⚠️ `fastapi` đã loại bỏ — team chọn Bun + ElysiaJS (TypeScript full-stack)
 
 ---
 
@@ -190,10 +191,19 @@
 | Category | Count |
 |---|---|
 | Vendor skills (Tier A+B) | ~55 skills |
-| Custom skills (Tier C) | 20 skills |
+| Custom skills (Tier C) | 19 skills (fastapi removed) |
 | Agent personas | 10 agents |
 | Project rules | 8 rules |
-| **Total files** | **~93 files** |
+| **Workflow rules** | **4 workflows** |
+| **Total files** | **~96 files** |
+
+### Workflow Rules (`.agents/rules/`)
+| File | Trigger | Mô tả |
+|---|---|---|
+| `workflow-plan.md` | "build feature", "tạo feature", "/plan" | 6-bước feature planning |
+| `workflow-debug.md` | "debug", "fix bug", "/debug" | Systematic debugging |
+| `workflow-tdd.md` | "viết test", "tdd", "/tdd-workflow" | TDD với Bun + Playwright + RAGAS |
+| `workflow-code-review.md` | "review code", "/code-review" | Review toàn diện (kể cả files user đề cập) |
 
 ---
 
@@ -206,10 +216,12 @@ git pull
 # Copy lại SKILL.md nếu có changes quan trọng
 ```
 
-### Khi tech stack được quyết định
-- Prune skills không dùng (fastapi hoặc elysiajs — giữ 1)
-- Update `rules/backend.md` với conventions cụ thể
-- Update `agents/backend-engineer.md` với stack đã chọn
+### Tech stack decisions (đã xác nhận 06/09/2026)
+- ✅ Backend: **Bun + ElysiaJS** — `fastapi` skill đã prune
+- ✅ Git: **Feature branch workflow**
+- ✅ `agents/backend-engineer.md` đã cập nhật
+- ⏳ Frontend: TBD (Next.js App Router được đề xuất)
+- ⏳ LLM: TBD (Gemini vs OpenAI — xem `docs/guides/tech-stack.md`)
 
 ### Khi thêm skill mới
 - Cập nhật file này với entry mới

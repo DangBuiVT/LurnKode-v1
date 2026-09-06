@@ -47,14 +47,27 @@
 | **Repo structure** | Monorepo | Dễ chia sẻ trong nhóm |
 | **Anti-cheat** | AST structural detection | Yêu cầu đề bài 5.4 |
 | **RAG eval** | RAGAS framework | Yêu cầu đề bài 5.1 |
+| **Backend** | **Bun + ElysiaJS (TypeScript)** | TypeScript full-stack, Elysia Eden type sharing, Bun ~3x nhanh hơn Node |
+| **Git workflow** | Feature branch | Mỗi feature 1 branch từ `main`, PR → CI pass → merge |
 
 ## Chưa quyết định (TBD)
 
-| Component | Options | Deadline quyết định |
+| Component | Options | Ghi chú |
 |---|---|---|
-| **Backend framework** | FastAPI (Python) vs Bun+ElysiaJS | Trước sprint 1 |
-| **Frontend framework** | Next.js App Router vs React+Vite | Trước sprint 1 |
-| **Frontend hosting** | Vercel vs Netlify | Khi deploy lần đầu |
+| **Frontend framework** | Next.js App Router vs React+Vite | Quyết định trước sprint 1 — Next.js được đề xuất (SSR, file-based routing) |
+| **Frontend hosting** | Vercel vs Netlify | Quyết định khi deploy lần đầu |
+| **Backend deploy** | Docker local → Railway | Local trước, Railway khi cần production |
+| **LLM Provider** | Gemini API vs OpenAI GPT-4o-mini | Xem bảng so sánh bên dưới |
+
+### LLM Provider — Đang cân nhắc
+
+| Provider | Model | Embedding | Free tier | Note |
+|---|---|---|---|---|
+| **Google Gemini** | `gemini-3.8-flash` (latest stable 2/9/2026) | `text-embedding-004` | Rộng (AI Studio) | Kiểm tra free tier tại [aistudio.google.com](https://aistudio.google.com) |
+| **OpenAI** | `gpt-4o-mini` | `text-embedding-3-small` | Hạn chế | $5 credit khi đăng ký |
+
+> ⚠️ **Lưu ý**: Gemini model version thay đổi thường xuyên. Luôn pin version cụ thể trong `.env` và kiểm tra free tier quota trong Google AI Studio trước khi commit.
+
 
 ---
 
