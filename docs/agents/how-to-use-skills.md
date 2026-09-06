@@ -1,6 +1,7 @@
 # How to Use Skills — DevVerse
 
 > Hướng dẫn sử dụng hệ thống AI skills trong Antigravity IDE.
+> **Stack đã xác nhận**: Bun + ElysiaJS · Supabase · Redis · Judge0
 
 ---
 
@@ -10,6 +11,20 @@ Khi bạn làm việc với Antigravity AI trong DevVerse, AI tự động đọ
 1. Áp dụng đúng **project rules** (conventions, security, testing...)
 2. Gọi đúng **specialist skill** khi cần context chuyên sâu
 3. Dùng đúng **agent persona** cho từng loại task
+4. Follow **workflow** phù hợp cho build / debug / review
+
+---
+
+## Workflows — Gọi bằng ngôn ngữ tự nhiên
+
+> Skills không gọi bằng `/` — nói chuyện bình thường, AI tự nhận biết workflow cần dùng.
+
+| Bạn nói | Workflow được áp dụng |
+|---|---|
+| "build feature X", "implement X", "plan feature" | `workflow-plan.md` — 6 bước từ context đến review |
+| "debug lỗi này", "tại sao X", "fix bug" | `workflow-debug.md` → `workflow-tdd.md` (Architecture Debug mode) |
+| "viết test cho X", "tdd" | `workflow-tdd.md` (TDD mode) |
+| "review code này", "xem lại PR" | `workflow-code-review.md` — architecture + security + improvements |
 
 ---
 
@@ -19,15 +34,25 @@ Khi bạn làm việc với Antigravity AI trong DevVerse, AI tự động đọ
 
 #### 🧱 Bắt đầu feature mới
 ```
-core/planning → core/implement → core/tdd → core/code-review → core/verification
+workflow-plan → core/planning → core/implement → core/tdd → core/code-review
 ```
 
-#### 🤖 AI Tutor (component 5.1)
+#### 🐛 Debug vấn đề
+```
+workflow-debug → workflow-tdd (Architecture Debug mode: audit 6 lớp → Root Cause Map → failing tests)
+```
+
+#### 🔍 Code Review
+```
+workflow-code-review → architecture review → security audit → improvement suggestions
+```
+
+#### 🤖 AI Tutor (RAG)
 ```
 ai/rag-pgvector → database/pgvector → ai/rag-citation → ai/ragas-eval
 ```
 
-#### ⚡ Code Judge / Sandbox (component 5.4)
+#### ⚡ Code Judge / Sandbox
 ```
 lms/judge0-integration → lms/sandbox-security → database/redis-queue → infra/judge0-deploy
 ```
@@ -54,17 +79,12 @@ ui-ux/ui-ux-pro-max → frontend/react-best-practices → frontend/web-design-gu
 
 #### 📦 Deploy
 ```
-cicd/deployment-strategies → infra/judge0-deploy → cicd/deploy-to-vercel
+cicd/ci-pipelines → infra/judge0-deploy → cicd/deployment-strategies
 ```
 
 #### 🧪 Testing
 ```
 testing/coverage-80 → testing/tdd-mattpocock → testing/webapp-testing
-```
-
-#### 🔍 Debug bug
-```
-core/diagnosing-bugs → core/systematic-debugging → core/verification
 ```
 
 ---
@@ -83,14 +103,22 @@ Khi cần AI đảm nhận một vai trò cụ thể:
 
 ---
 
-## Workflow chuẩn (Superpowers Harness)
+## Workflow chuẩn
 
 ```
-1. PLAN     → core/planning         (tạo implementation plan)
-2. IMPL     → core/implement        (viết code)
-3. TEST     → core/tdd              (viết tests)
-4. REVIEW   → core/code-review      (review trước khi merge)
-5. VERIFY   → core/verification     (chạy lại tests, kiểm tra edge cases)
+1. PLAN    → workflow-plan.md     (context check → implementation plan → approval)
+2. IMPL    → core/implement       (DB first → Backend → Frontend)
+3. TEST    → workflow-tdd.md      (TDD mode: viết failing test trước)
+4. REVIEW  → workflow-code-review.md  (architecture + security + suggestions)
+5. VERIFY  → core/verification    (chạy lại tests, CI green, edge cases)
+```
+
+Khi có bug:
+```
+1. DEBUG   → workflow-debug.md        (phân loại, localize)
+2. AUDIT   → workflow-tdd.md          (Architecture Debug: audit 6 lớp)
+3. FIX     → viết failing test trước, sau đó fix
+4. VERIFY  → test pass, coverage vẫn ≥ 80%
 ```
 
 ---

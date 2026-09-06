@@ -1,66 +1,97 @@
-# DevVerse Documentation
+# DevVerse — Docs Index
 
-> **CO3103 — HK261** | Cloud Programming Academy (LeetCode-like LMS)
+> **CO3103 · HK261** | LMS + RAG AI Tutor + Assessment & Academic Integrity
 
 ---
 
-## 📚 Mục lục
+## 📖 Guides — Hướng dẫn phát triển
 
-### Guides — Hướng dẫn phát triển
-| File | Mô tả |
-|---|---|
-| [getting-started.md](./guides/getting-started.md) | Setup môi trường dev từ đầu |
-| [tech-stack.md](./guides/tech-stack.md) | Tổng quan kiến trúc và tech stack |
-| [architecture-decisions.md](./guides/architecture-decisions.md) | Các quyết định kiến trúc và lý do |
-| [environment-setup.md](./guides/environment-setup.md) | Cấu hình biến môi trường |
-| [database-guide.md](./guides/database-guide.md) | Schema, migrations, RLS workflow |
-| [testing-guide.md](./guides/testing-guide.md) | Hướng dẫn viết tests đạt >=80% |
-| [deployment-guide.md](./guides/deployment-guide.md) | Deploy lên Vercel + Railway/Render |
+| File | Mô tả | Status |
+|---|---|---|
+| [tech-stack.md](./guides/tech-stack.md) | Kiến trúc tổng quan, stack decisions, LLM options | ✅ Cập nhật |
+| [getting-started.md](./guides/getting-started.md) | Setup môi trường dev từ đầu | ⚠️ Cần update cho Bun |
+| [environment-setup.md](./guides/environment-setup.md) | Cấu hình `.env` mọi môi trường | ⚠️ Cần update LLM key |
 
-### Agents — AI Agent System
+---
+
+## 🤖 Agents — AI Agent System
+
 | File | Mô tả |
 |---|---|
 | [agents-overview.md](./agents/agents-overview.md) | Tổng quan hệ thống `.agents/` |
-| [how-to-use-skills.md](./agents/how-to-use-skills.md) | Cách sử dụng skills trong Antigravity |
+| [how-to-use-skills.md](./agents/how-to-use-skills.md) | Cách sử dụng skills trong Antigravity IDE |
 | [skill-reference.md](./agents/skill-reference.md) | Danh sách đầy đủ skills + khi nào dùng |
 
 ---
 
-## 🏗️ Project Overview
+## 🏗️ Tech Stack (tóm tắt)
 
-| Thành phần | Stack | Hosting |
-|---|---|---|
-| Frontend | TBD (Next.js / React) | Vercel / Netlify |
-| Backend API | TBD (FastAPI / Bun+Elysia) | Railway / Render |
-| Database | Supabase (PostgreSQL + pgvector) | Supabase Cloud |
-| Code Judge | Judge0 (self-hosted) | Railway / Render |
-| Queue | Redis + BullMQ / Celery | Railway |
-| CI/CD | GitHub Actions | GitHub |
+### Đã chốt ✅
 
-## 🎯 Mandatory Components (CO3103)
+| Layer | Technology |
+|---|---|
+| Backend | **Bun + ElysiaJS** (TypeScript) |
+| Database | Supabase (PostgreSQL + pgvector + Auth) |
+| Queue | Redis + BullMQ |
+| Code Judge | Judge0 (self-hosted Docker) |
+| CI/CD | GitHub Actions · Feature branch workflow |
+| Anti-cheat | AST structural detection (Jaccard ≥ 85%) |
+| RAG eval | RAGAS (Faithfulness + Answer Relevancy) |
+
+### Chưa chốt ⏳
+
+| Layer | Options |
+|---|---|
+| Frontend | Next.js App Router *(đề xuất)* vs React+Vite |
+| LLM Provider | `gemini-3.8-flash` vs `gpt-4o-mini` |
+| Backend deploy | Docker local → Railway |
+
+> Xem chi tiết tại [`tech-stack.md`](./guides/tech-stack.md)
+
+---
+
+## 🎯 Functional Modules
 
 ### Core LMS
-- RBAC: Student / Instructor / Admin
-- Course hierarchy (Module → Lesson)
-- Video + Slide content delivery
-- Enrollment & Progress tracking
-- Quizzes & Assignments (auto/manual grading)
+- Auth & RBAC (Student / Instructor / Admin)
+- Course → Chapter → Lesson → Material
+- Enrollment & Learning Progress
+- Assessment (quiz, assignment, auto/manual grading)
+- Discussion, Notifications, Audit Log
 
-### Advanced 5.1 — RAG AI Tutor
-- Vector DB: **pgvector** (trong Supabase, free tier)
-- Sources: course slides + video transcripts
-- Citations: exact lesson/slide source bắt buộc
-- Evaluation: **RAGAS** (Faithfulness + Answer Relevance vs Vanilla LLM)
+### Advanced Component 1 — RAG AI Tutor
+- Retrieval-Augmented Generation từ học liệu khóa học
+- Citation bắt buộc (Course / Lesson / Material)
+- Out-of-scope handling — không hallucinate
+- User feedback + RAGAS evaluation
 
-### Advanced 5.4 — Sandbox + Anti-cheat
-- Sandbox: **Judge0** (Docker, CPU/RAM limits, Redis queue)
-- Anti-cheat: **AST structural plagiarism detection**
-- Execution latency target: **< 2 seconds**
-- Evaluation: AST recall rate vs String Matching baseline
+### Advanced Component 2 — Assessment & Academic Integrity
+- Question bank + randomized exam generation
+- Auto grading + rubric/instructor review
+- AST-based plagiarism detection → warning cho instructor
+- Attempt state machine: `NOT_STARTED → IN_PROGRESS → SUBMITTED/EXPIRED → GRADED`
+
+---
 
 ## ✅ Quality Gates
 
-- Test coverage: **>= 80%** (enforced in CI)
-- Code review required trước khi merge
-- No API key leaks (`.env` không commit)
-- Security: CORS strict + RLS trên tất cả tables
+| Gate | Target |
+|---|---|
+| Test coverage | ≥ 80% (enforced trong CI) |
+| Code review | Bắt buộc trước merge |
+| Secrets | `.env` không commit — dùng GitHub Secrets |
+| RLS | Tất cả Supabase tables có Row Level Security |
+| CORS | Origin whitelist — không dùng `*` production |
+
+---
+
+## 📅 Sprint Timeline
+
+| Tuần | Focus |
+|---|---|
+| 39–40 | Architecture, DB schema, API contracts |
+| 41–43 | Core LMS (Auth, Course, Enrollment, Progress) |
+| 44 | Assessment (Question bank, exam, grading) |
+| 45–46 | RAG AI Tutor (indexing, retrieval, citation) |
+| 47 | Integrity detection, random exam, auto grading |
+| 48–49 | Integration, testing, benchmark, demo |
