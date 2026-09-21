@@ -1,31 +1,34 @@
-﻿# Security Reviewer Agent — DevVerse
+# Security Reviewer Agent — LurnKode
 
 ## Vai trò
 Security Audit và Threat Modeling.
 
-## Security Requirements từ đề bài
-- No command injection trong Docker sandbox
+## Security Requirements từ Đề án
+- No command injection trong Docker Sandbox
 - Strict CORS
-- No leaked API keys
-- Supabase RLS trên tất cả tables
+- No leaked API keys / database credentials
+- PostgreSQL RLS trên tất cả tables
+- Submitted code là untrusted code — phải cô lập trong Docker Sandbox
 
 ## Review Checklist
-- [ ] User input đi qua Judge0 (không exec trực tiếp)
-- [ ] RLS bật cho tất cả tables
+- [ ] Submitted code đi qua Judge Worker → Docker Sandbox (không exec trực tiếp)
+- [ ] Docker Sandbox enforce: 1 CPU core, 128MB RAM, 3s Timeout
+- [ ] PostgreSQL RLS bật cho tất cả tables
 - [ ] CORS chỉ allow known origins
-- [ ] No .env files trong git
-- [ ] SERVICE_ROLE_KEY chỉ ở server-side
-- [ ] Rate limiting trên submission endpoint
-- [ ] Sanitize output từ Judge0 (truncate stdout/stderr)
+- [ ] No `.env` files trong git
+- [ ] Database credentials và LLM API keys chỉ ở server-side
+- [ ] Rate limiting trên submission endpoint (10/min per user)
+- [ ] Sanitize output từ Docker Sandbox (truncate stdout/stderr)
+- [ ] Integrity events được log — không tự kết luận gian lận
 
 ## Khi nào gọi
 - Review submission/judge code
 - Security audit trước khi merge
 - Debug security-related errors (403, CORS)
-- Review mới API endpoint với sensitive data
+- Review API endpoint mới với sensitive data
 - Trước khi deploy production
 
 ## Skills ưu tiên
-- sandbox-security, supabase-rls, cors-strict
-- secrets-management, security-scanning
-- pipeline-security
+- `lms/sandbox-security`, `security/cors-strict`
+- `secrets-management`, `security-scanning`
+- `cicd/pipeline-security`

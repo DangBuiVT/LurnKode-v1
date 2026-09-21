@@ -1,65 +1,70 @@
-﻿# LMS Domain Rules — DevVerse CO3103
+# LMS Domain Rules — LurnKode CO3103
 
 ## Core LMS Requirements
 
 ### RBAC
-- 3 roles cố định: Student, Instructor, Admin
-- Roles được lưu trong Supabase user_metadata
+- 3 roles cố định: **Learner** (Student), **Instructor**, **Admin**
+- Roles được lưu trong bảng `users` của PostgreSQL (quản lý qua Drizzle ORM)
 - Không thể tự assign role (chỉ Admin mới assign)
+- Middleware kiểm tra role trước khi xử lý request
 
 ### Content Hierarchy
-- Course → Module → Lesson (fixed 3 levels)
-- Lesson types: video, slide, mixed, text
-- Module order phải có order_index
+- **Course → Chapter → Lesson → Material** (4 cấp)
+- Material types: video, markdown/text, slide
+- Chapter và Lesson phải có `order_index`
+- Sequential learning: phải hoàn thành Lesson trước mới mở Lesson tiếp theo
 
 ### Enrollment
-- Student phải enroll trước khi xem non-free lessons
+- Learner phải enroll trước khi xem non-free lessons
 - Instructor không thể enroll course của mình
 - Admin không cần enroll
 
-## Advanced Component 5.1: RAG AI Tutor
+## AI Tutor — RAG (Course-Grounded)
 
 ### MUST haves
-- Vector DB: pgvector (đã chọn)
-- Sources: course slides + video transcripts
-- Citations: PHẢI trả về exact lesson/slide source
-- Out-of-scope: PHẢI detect và respond safely
-- Evaluation: RAGAS (Faithfulness + Answer Relevance)
-- So sánh với Vanilla LLM baseline
+- Vector DB: **pgvector** (trong PostgreSQL, Drizzle schema)
+- Sources: CHỈ **published** course materials được đưa vào knowledge base
+- Citations: PHẢI trả về exact Chapter/Lesson/Material source
+- Out-of-scope: PHẢI detect và respond an toàn (không hallucinate)
+- Evaluation metrics: Recall@K, Precision@K, Answer Relevance, Grounding, Citation Correctness, Out-of-scope Rejection Accuracy, User Feedback
 
 ### Ethics
-- AI Tutor không được làm bài tập thay student
+- AI Tutor không được làm bài tập thay learner
 - Phải cite nguồn — không fabricate
-- Giới hạn scope trong course content
+- Giới hạn scope trong published course content
 
-## Advanced Component 5.4: Sandbox + Anti-cheat
+## Automated Code Assessment — Judge Worker & Docker Sandbox
 
 ### Sandbox MUST haves
-- Isolated execution: Judge0 Docker containers
-- CPU limit: 2 seconds
-- Memory limit: 256MB
-- Redis queue cho async processing
-- Execution latency target: <2s
+- Isolated execution: **Docker Sandbox** (container cô lập)
+- **CPU limit: 1 CPU core**
+- **Memory limit: 128MB RAM**
+- **Execution timeout: 3 seconds**
+- **Submission Queue: Redis** (async processing)
+- Kết quả: **AC** (Accepted), **WA** (Wrong Answer), **TLE** (Time Limit Exceeded), **RTE** (Runtime Error)
 
-### Anti-cheat MUST haves
-- Method: AST structural plagiarism detection
-- Compare với String Matching baseline
-- Metric: AST recall rate
-- Include fail-safe error reporting
-- KHÔNG dựa vào client-side controls
+### Architecture
+```
+Code Submission
+      ↓ Validate (size, language whitelist)
+Redis Submission Queue
+      ↓ Judge Worker picks up job
+Docker Sandbox (resource-limited)
+      ↓ Run against Hidden Tests
+Test Result → Store → Notify Frontend
+```
 
-### Judge Ethics
-- Plagiarism chỉ flag — không auto-punish
-- Admin review trước khi action
-- False positives phải có appeal path
+### Integrity Monitoring
+- Suspicious activity → **Integrity Event** (logged for Instructor review)
+- **KHÔNG tự động kết luận gian lận** — Instructor phải review evidence
+- Integrity event chỉ là cảnh báo, không tự áp dụng hình phạt
 
-## Security từ đề bài
-- No command injection
+## Security từ Đề án
+- No command injection — code học viên không được chạy trong API process
 - Strict CORS
-- No leaked API keys
+- No leaked API keys / database credentials
 - Production-ready API quality
 
-## Performance từ đề bài
-- System Uptime & Stability
-- Judge execution: <2s
-- Code coverage: >=80%
+## Performance từ Đề án
+- Judge execution: < 3s (Docker Sandbox timeout)
+- Code coverage: >= 80%

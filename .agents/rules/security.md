@@ -1,24 +1,26 @@
-﻿# Security Rules — DevVerse LMS
+# Security Rules — LurnKode LMS
 
-## BẮT BUỘC (từ đề bài)
+## BẮT BUỘC
 
-### 1. No Command Injection
-- User code CHỈ được chạy qua Judge0 API
-- TUYỆT ĐỐI KHÔNG: exec(), eval(), os.system(user_code)
-- Validate code size (max 64KB) trước khi gửi Judge0
+### 1. No Command Injection / Untrusted Code Execution
+- Submitted code là **untrusted code** — KHÔNG được chạy trực tiếp trong API process
+- TUYỆT ĐỐI KHÔNG: `exec()`, `eval()`, `os.system(user_code)` trong API
+- Submitted code CHỈ được chạy qua **Judge Worker** trong **Docker Sandbox**
+- Docker Sandbox enforce resource limits: **1 CPU core, 128MB RAM, 3s Timeout**
+- Validate code size (max 64KB) trước khi enqueue
 
 ### 2. CORS Strict
-- Không dùng wildcard (*) trong production
-- ALLOWED_ORIGINS từ environment variable
+- Không dùng wildcard (`*`) trong production
+- `ALLOWED_ORIGINS` từ environment variable
 - Credentials: true chỉ khi cần thiết
 
-### 3. No Leaked API Keys
+### 3. No Leaked Secrets
 - Tất cả secrets trong environment variables
-- .env KHÔNG commit vào git
-- NEXT_PUBLIC_ prefix CHỈ cho keys được phép expose
-- SUPABASE_SERVICE_ROLE_KEY: server-side only
+- `.env` KHÔNG commit vào git
+- `NEXT_PUBLIC_` prefix CHỈ cho keys được phép expose ra browser
+- Database credentials, LLM API keys: server-side only
 
-### 4. Supabase RLS
+### 4. PostgreSQL RLS
 - BẮT BUỘC bật RLS trên tất cả tables
 - Mỗi table phải có policy cho từng role cần thiết
 
@@ -35,5 +37,6 @@
 - UUID format validation cho ID params
 
 ### Output Sanitization
-- Truncate Judge0 stdout (max 4KB), stderr (max 1KB)
+- Truncate Docker Sandbox stdout (max 4KB), stderr (max 1KB)
 - Không expose internal stack traces
+- Integrity events được log cho Instructor review — không tự kết luận gian lận

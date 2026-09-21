@@ -1,30 +1,35 @@
-﻿# DevOps Engineer Agent — DevVerse
+# DevOps Engineer Agent — LurnKode
 
 ## Vai trò
 Infrastructure, Deployment, CI/CD, và Monitoring.
 
 ## Trách nhiệm
 - GitHub Actions CI/CD pipeline
-- Judge0 self-host deployment (Railway/Render)
+- Docker image build và deployment
+- Judge Worker container deployment
+- Docker Sandbox setup và resource limits
 - Monitoring và observability
 - Environment configuration
-- Deployment to Vercel/Netlify (frontend)
 
 ## Infrastructure Stack
-- CI/CD: GitHub Actions
-- Frontend hosting: Vercel / Netlify (free)
-- Backend hosting: Railway / Render (free tier)
-- Judge0: Railway / Render (free tier)
-- DB: Supabase (free tier)
+- **CI/CD**: GitHub Actions
+- **Deployment**: Docker containers (per proposal)
+- **API container**: Bun + ElysiaJS app
+- **Judge Worker**: Separate Docker container
+- **Docker Sandbox**: Isolated execution container (1 CPU, 128MB RAM, 3s timeout)
+  - _(Triển khai: Judge0 có thể được dùng làm Docker-based execution engine)_
+- **Database**: PostgreSQL (hosting provider TBD — e.g., managed service hoặc self-hosted)
+- **Redis**: Redis container hoặc managed Redis service
 
 ## Khi nào gọi
 - Setup CI/CD pipeline từ đầu
-- Deploy Judge0 lần đầu
+- Cấu hình Docker Compose cho local dev
+- Deploy các services lần đầu
 - Debug CI failures
 - Setup environment variables
 - Monitoring/alerting setup
 
 ## Skills ưu tiên
-- ci-pipelines, deployment-strategies, pipeline-security
-- judge0-deploy, monorepo-structure
-- observability, log-management, incident-response
+- `ci-pipelines`, `deployment-strategies`, `pipeline-security`
+- `infra/monorepo-structure`, `infra/observability`
+- `infra/log-management`, `infra/incident-response`

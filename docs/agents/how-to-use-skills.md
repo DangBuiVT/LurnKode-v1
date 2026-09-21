@@ -1,13 +1,13 @@
-# How to Use Skills — DevVerse
+# How to Use Skills — LurnKode
 
 > Hướng dẫn sử dụng hệ thống AI skills trong Antigravity IDE.
-> **Stack đã xác nhận**: Bun + ElysiaJS · Supabase · Redis · Judge0
+> **Stack đã xác nhận**: Next.js + TypeScript · Bun + ElysiaJS · PostgreSQL + Drizzle ORM · Redis · Docker Sandbox
 
 ---
 
 ## Cách skills hoạt động
 
-Khi bạn làm việc với Antigravity AI trong DevVerse, AI tự động đọc `.agents/` để:
+Khi bạn làm việc với Antigravity AI trong LurnKode, AI tự động đọc `.agents/` để:
 1. Áp dụng đúng **project rules** (conventions, security, testing...)
 2. Gọi đúng **specialist skill** khi cần context chuyên sâu
 3. Dùng đúng **agent persona** cho từng loại task
@@ -52,24 +52,24 @@ workflow-code-review → architecture review → security audit → improvement 
 ai/rag-pgvector → database/pgvector → ai/rag-citation → ai/ragas-eval
 ```
 
-#### ⚡ Code Judge / Sandbox
+#### ⚡ Code Judge / Docker Sandbox
 ```
-lms/judge0-integration → lms/sandbox-security → database/redis-queue → infra/judge0-deploy
+lms/sandbox-security → lms/judge0-integration → database/redis-queue
 ```
 
-#### 🚫 Anti-cheat
+#### 🚫 Integrity Monitoring
 ```
-lms/ast-plagiarism → lms/sandbox-security → security/supabase-rls
+lms/sandbox-security → lms/rbac-lms → security/cors-strict
 ```
 
 #### 🗄️ Database schema mới
 ```
-database/supabase → security/supabase-rls → lms/course-hierarchy (tham khảo)
+database/drizzle-orm → database/pgvector → lms/course-hierarchy (tham khảo)
 ```
 
 #### 🔐 Authentication / RBAC
 ```
-lms/rbac-lms → database/supabase → security/supabase-rls → security/cors-strict
+lms/rbac-lms → security/cors-strict
 ```
 
 #### 🎨 UI / Frontend
@@ -98,7 +98,7 @@ Khi cần AI đảm nhận một vai trò cụ thể:
 → Antigravity đọc agents/architect.md + áp dụng skills phù hợp
 
 "Review code này với vai trò Security Reviewer..."
-→ Antigravity đọc agents/security-reviewer.md + skills: sandbox-security, supabase-rls, cors-strict
+→ Antigravity đọc agents/security-reviewer.md + skills: sandbox-security, cors-strict, secrets-management
 ```
 
 ---

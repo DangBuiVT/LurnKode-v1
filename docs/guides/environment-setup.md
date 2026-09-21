@@ -1,23 +1,27 @@
-# Environment Setup — DevVerse
+# Environment Setup — LurnKode
 
-> Hướng dẫn cấu hình environment variables cho mọi môi trường.
-> **Stack**: Bun + ElysiaJS · Supabase · Redis · Judge0 · LLM API (TBD: Gemini / OpenAI)
+> Hướng dẫn cấu hình environment variables cho mọi môi trường.  
+> **Stack**: Bun + ElysiaJS · PostgreSQL + Drizzle ORM · Redis · Docker Sandbox · LLM API (TBD: Gemini / OpenAI)
 
 ---
 
 ## `.env.example` (commit vào git)
 
-Tạo file này ở root project để team biết cần những variables nào.
+Tạo file này ở root project để team biết cần những variables nào.  
 **File thật (`.env`) KHÔNG commit** — chỉ commit `.env.example`.
 
 ```env
 # ============================================
-# SUPABASE
+# DATABASE (PostgreSQL + Drizzle ORM)
 # ============================================
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-# ⚠️ SERVICE_ROLE_KEY: backend server-side ONLY — KHÔNG đưa vào frontend
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lurnkode
+# Production: postgresql://user:password@host:5432/lurnkode?sslmode=require
+
+# ============================================
+# REDIS (Submission Queue + Cache)
+# ============================================
+REDIS_URL=redis://localhost:6379
+# Production: redis://:password@host:port
 
 # ============================================
 # LLM (RAG AI Tutor) — Chọn 1 provider
@@ -26,7 +30,8 @@ LLM_PROVIDER=gemini                  # hoặc: openai
 
 # Google Gemini (free tier tại aistudio.google.com)
 GEMINI_API_KEY=AIzaSy...
-GEMINI_MODEL=gemini-3.8-flash        # pin version — kiểm tra free tier trước khi dùng
+GEMINI_MODEL=gemini-2.5-flash        # pin version cụ thể
+GEMINI_EMBEDDING_MODEL=text-embedding-004
 
 # OpenAI (fallback / alternative)
 OPENAI_API_KEY=sk-...
@@ -34,17 +39,19 @@ OPENAI_MODEL=gpt-4o-mini
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 
 # ============================================
-# JUDGE0 (Code Execution Sandbox)
+# JUDGE WORKER (Docker Sandbox)
 # ============================================
-JUDGE0_URL=http://localhost:2358          # local Docker
-# JUDGE0_URL=https://your-judge0.railway.app  # production Railway
-JUDGE0_AUTH=your_secret_token_here
+JUDGE_WORKER_URL=http://localhost:2358          # local Docker
+# JUDGE_WORKER_URL=https://your-judge.example.com  # production
+JUDGE_WORKER_AUTH=your_secret_token_here
+# Resource limits được cấu hình tại Judge Worker level:
+# CPU: 1 core · RAM: 128MB · Timeout: 3s
 
 # ============================================
-# REDIS (Submission Queue + Cache)
+# AUTH (JWT)
 # ============================================
-REDIS_URL=redis://localhost:6379
-# Railway Redis: redis://:password@host:port
+JWT_SECRET=your_jwt_secret_min_32_chars
+JWT_EXPIRY=7d
 
 # ============================================
 # CORS (chỉ domains cụ thể — KHÔNG dùng *)
@@ -62,18 +69,17 @@ PORT=3001
 
 ## Frontend Environment Variables
 
-> Chỉ variables có prefix `NEXT_PUBLIC_` mới được expose ra browser.
-> `SERVICE_ROLE_KEY` **tuyệt đối không** có prefix `NEXT_PUBLIC_`.
+> Chỉ variables có prefix `NEXT_PUBLIC_` mới được expose ra browser.  
+> API keys và database credentials **tuyệt đối không** có prefix `NEXT_PUBLIC_`.
 
 ```env
 # apps/web/.env.local
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
-> ⚠️ **KHÔNG BAO GIỜ** đặt `NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY`  
-> ⚠️ **KHÔNG BAO GIỜ** đặt `NEXT_PUBLIC_GEMINI_API_KEY` hoặc `NEXT_PUBLIC_OPENAI_API_KEY`
+> ⚠️ **KHÔNG BAO GIỜ** đặt `NEXT_PUBLIC_DATABASE_URL`  
+> ⚠️ **KHÔNG BAO GIỜ** đặt `NEXT_PUBLIC_GEMINI_API_KEY` hoặc `NEXT_PUBLIC_OPENAI_API_KEY`  
+> ⚠️ **KHÔNG BAO GIỜ** đặt `NEXT_PUBLIC_JWT_SECRET`
 
 ---
 
@@ -81,17 +87,18 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 
 ```env
 # apps/api/.env
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=...        # server-side only
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lurnkode
+REDIS_URL=redis://localhost:6379
 
-LLM_PROVIDER=gemini                  # hoặc: openai
+LLM_PROVIDER=gemini
 GEMINI_API_KEY=AIzaSy...
-GEMINI_MODEL=gemini-3.8-flash
+GEMINI_MODEL=gemini-2.5-flash
 # OPENAI_API_KEY=sk-...             # uncomment nếu dùng OpenAI
 
-JUDGE0_URL=http://localhost:2358
-JUDGE0_AUTH=...
-REDIS_URL=redis://localhost:6379
+JUDGE_WORKER_URL=http://localhost:2358
+JUDGE_WORKER_AUTH=...
+
+JWT_SECRET=your_jwt_secret_min_32_chars
 ALLOWED_ORIGINS=http://localhost:3000
 PORT=3001
 NODE_ENV=development
@@ -105,35 +112,29 @@ Vào **GitHub → Settings → Secrets and variables → Actions** và thêm:
 
 | Secret name | Value | Ghi chú |
 |---|---|---|
-| `SUPABASE_URL` | URL của Supabase project | |
-| `SUPABASE_ANON_KEY` | Anon/public key | |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key | ⚠️ Bí mật tuyệt đối |
+| `DATABASE_URL` | PostgreSQL connection string | ⚠️ Bí mật tuyệt đối |
+| `REDIS_URL` | Redis connection string | |
 | `LLM_PROVIDER` | `gemini` hoặc `openai` | |
 | `GEMINI_API_KEY` | Google AI Studio API key | Nếu dùng Gemini |
 | `OPENAI_API_KEY` | OpenAI API key | Nếu dùng OpenAI |
-| `JUDGE0_URL` | Judge0 deployment URL | |
-| `JUDGE0_AUTH` | Judge0 auth token | |
-| `REDIS_URL` | Redis connection string | |
-| `VERCEL_TOKEN` | Vercel deploy token | Nếu deploy Vercel |
+| `JUDGE_WORKER_URL` | Judge Worker deployment URL | |
+| `JUDGE_WORKER_AUTH` | Judge Worker auth token | |
+| `JWT_SECRET` | JWT signing secret | ⚠️ Bí mật tuyệt đối |
+
+> ℹ️ Nếu dùng Supabase làm managed PostgreSQL hosting, thêm:  
+> `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`  
+> _(đây là implementation detail của provider, không phải tech stack chính)_
 
 ---
 
 ## Lấy API Keys
 
-### Supabase
-1. Vào https://supabase.com/dashboard
-2. Chọn project → **Settings** → **API**
-3. Copy:
-   - **Project URL** → `SUPABASE_URL`
-   - **anon public** key → `SUPABASE_ANON_KEY`
-   - **service_role** key → `SUPABASE_SERVICE_ROLE_KEY` *(giữ bí mật!)*
-
-### Gemini API (Free tier)
+### Google Gemini API (Free tier)
 1. Vào https://aistudio.google.com
 2. Đăng nhập bằng Google Account
 3. **Get API key** → tạo key mới
-4. **Kiểm tra quota**: Projects → IAM → Quotas (free tier: ~1M tokens/ngày, ~15 RPM)
-5. ⚠️ **Không enable billing** trên Google Cloud project đó — sẽ mất free tier
+4. **Kiểm tra quota**: free tier ~1M tokens/ngày, ~15 RPM
+5. ⚠️ **Không enable billing** trên Google Cloud project — sẽ mất free tier
 
 ### OpenAI (nếu dùng)
 1. Vào https://platform.openai.com/api-keys
@@ -168,8 +169,8 @@ out/
 *.key
 *.p12
 
-# Supabase local
-.supabase/
+# Drizzle
+drizzle/meta/  # có thể commit nếu muốn track migrations
 ```
 
 ---
@@ -178,8 +179,9 @@ out/
 
 - [ ] `.env` đã có trong `.gitignore`
 - [ ] Không commit `.env` vào git (`git status` trước khi push)
-- [ ] `SUPABASE_SERVICE_ROLE_KEY` **không có trong** frontend code hoặc bundle
-- [ ] LLM API key (`GEMINI_API_KEY` / `OPENAI_API_KEY`) **không có prefix `NEXT_PUBLIC_`**
-- [ ] `JUDGE0_AUTH` token **không bị log** trong backend console
+- [ ] `DATABASE_URL` **không có trong** frontend code hoặc bundle
+- [ ] LLM API key **không có prefix `NEXT_PUBLIC_`**
+- [ ] `JWT_SECRET` **không bị log** trong backend console
+- [ ] `JUDGE_WORKER_AUTH` token **không bị log**
 - [ ] GitHub Secrets đã được cấu hình đầy đủ
 - [ ] `ALLOWED_ORIGINS` chỉ chứa domains thực sự cần thiết (không dùng `*`)

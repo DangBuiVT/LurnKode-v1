@@ -1,8 +1,8 @@
-# DevVerse Agent Skill Manifest
+# LurnKode Agent Skill Manifest
 
 > Ngày cài đặt: 2026-09-05  
-> Project: CO3103 — DevVerse Cloud Programming Academy  
-> Môi trường: `d:\DevVerse\.agents\skills\`
+> Project: CO3103 — LurnKode: AI-Assisted Learning Platform  
+> Môi trường: `d:\LurnKode\.agents\skills\`
 
 ---
 
@@ -122,7 +122,7 @@
 - **License**: MIT
 - **Install method**: `git clone --depth 1`
 - **Skills installed**:
-  - `ai/langchain-rag` ← **Key skill for RAG AI Tutor (5.1)**
+  - `ai/langchain-rag` ← **Key skill for RAG AI Tutor**
   - `ai/langchain-fundamentals`
   - `ai/eval-engineering`
   - `ai/langchain-middleware`
@@ -133,56 +133,59 @@
 
 ---
 
-## Tier C — Custom Skills (DevVerse-specific, authored in-house)
+## Tier C — Custom Skills (LurnKode-specific, authored in-house)
 
 ### Database Domain
 | Skill | Path | Reason |
 |---|---|---|
-| `supabase` | `database/supabase/` | Supabase RLS, Auth, Storage, pgvector patterns |
 | `pgvector` | `database/pgvector/` | Vector search, HNSW, cosine similarity, RAG pipeline |
-| `redis-queue` | `database/redis-queue/` | BullMQ/Celery submission queue patterns |
+| `redis-queue` | `database/redis-queue/` | Redis submission queue patterns |
+| `drizzle-orm` | `database/drizzle-orm/` | Drizzle ORM schema, migration patterns (PostgreSQL) |
+
+> ⚠️ `database/supabase` — Supabase có thể được dùng làm **managed PostgreSQL provider** cho môi trường dev/production. Không phải là tầng công nghệ chính — chỉ là lựa chọn hosting.
 
 ### AI / RAG Domain
 | Skill | Path | Reason |
 |---|---|---|
-| `rag-pgvector` | `ai/rag-pgvector/` | Full RAG pipeline với pgvector + Supabase |
-| `ragas-eval` | `ai/ragas-eval/` | RAGAS evaluation framework (5.1 requirement) |
+| `rag-pgvector` | `ai/rag-pgvector/` | Full RAG pipeline với pgvector — chunking, embedding, retrieval, citation |
+| `ragas-eval` | `ai/ragas-eval/` | RAG evaluation framework (Recall@K, Precision@K, Grounding, Citation) |
 | `rag-citation` | `ai/rag-citation/` | Citation format, out-of-scope handling |
 
 ### LMS Domain
 | Skill | Path | Reason |
 |---|---|---|
-| `judge0-integration` | `lms/judge0-integration/` | Judge0 API, submission lifecycle, multi-testcase |
-| `ast-plagiarism` | `lms/ast-plagiarism/` | AST structural detection vs string matching (5.4) |
-| `sandbox-security` | `lms/sandbox-security/` | No injection, resource limits, fail-safe |
-| `rbac-lms` | `lms/rbac-lms/` | Student/Instructor/Admin RBAC patterns |
-| `course-hierarchy` | `lms/course-hierarchy/` | Course/Module/Lesson data model |
+| `judge0-integration` | `lms/judge0-integration/` | Judge Worker implementation detail — Judge0 làm Docker-based execution engine |
+| `sandbox-security` | `lms/sandbox-security/` | No injection, resource limits (1 CPU/128MB/3s), fail-safe |
+| `rbac-lms` | `lms/rbac-lms/` | Learner/Instructor/Admin RBAC patterns |
+| `course-hierarchy` | `lms/course-hierarchy/` | Course → Chapter → Lesson → Material data model |
 | `quiz-engine` | `lms/quiz-engine/` | Quiz state machine, auto/manual grading |
-| `progress-tracking` | `lms/progress-tracking/` | Enrollment, completion, analytics |
+| `progress-tracking` | `lms/progress-tracking/` | Enrollment, completion, resume learning |
+
+> ⚠️ `lms/ast-plagiarism` — Đây là một phương pháp kỹ thuật phát hiện bất thường, KHÔNG phải thành phần bắt buộc của Integrity Monitoring MVP. Integrity events được log cho Instructor review.
 
 ### Testing Domain
 | Skill | Path | Reason |
 |---|---|---|
-| `coverage-80` | `testing/coverage-80/` | >=80% coverage gate — CI enforcement |
+| `coverage-80` | `testing/coverage-80/` | >= 80% coverage gate — CI enforcement |
 
 ### Security Domain
 | Skill | Path | Reason |
 |---|---|---|
-| `supabase-rls` | `security/supabase-rls/` | RLS policy patterns, helper functions |
 | `cors-strict` | `security/cors-strict/` | CORS config, API key security, headers |
+
+> ⚠️ `security/supabase-rls` — Nếu dùng Supabase hosting, giữ lại như implementation detail. Tầng chính là **PostgreSQL RLS**.
 
 ### Infrastructure Domain
 | Skill | Path | Reason |
 |---|---|---|
-| `judge0-deploy` | `infra/judge0-deploy/` | Judge0 self-host on Railway/Render free |
-| `monorepo-structure` | `infra/monorepo-structure/` | Monorepo layout, workspace config |
+| `monorepo-structure` | `infra/monorepo-structure/` | Monorepo layout, Bun workspaces |
 
 ### Backend Domain
 | Skill | Path | Reason |
 |---|---|---|
-| `elysiajs` | `backend/elysiajs/` | **PRIMARY** — Bun + Elysia patterns (stack đã xác nhận) |
+| `elysiajs` | `backend/elysiajs/` | **PRIMARY** — Bun + ElysiaJS patterns (stack đã xác nhận) |
 
-> ⚠️ `fastapi` đã loại bỏ — team chọn Bun + ElysiaJS (TypeScript full-stack)
+> ⚠️ `fastapi` đã loại bỏ hoàn toàn — team xác nhận Bun + ElysiaJS (TypeScript full-stack)
 
 ---
 
@@ -191,19 +194,18 @@
 | Category | Count |
 |---|---|
 | Vendor skills (Tier A+B) | ~55 skills |
-| Custom skills (Tier C) | 19 skills (fastapi removed) |
+| Custom skills (Tier C) | ~18 skills |
 | Agent personas | 10 agents |
 | Project rules | 8 rules |
 | **Workflow rules** | **4 workflows** |
-| **Total files** | **~96 files** |
 
 ### Workflow Rules (`.agents/rules/`)
 | File | Trigger | Mô tả |
 |---|---|---|
-| `workflow-plan.md` | "build feature", "tạo feature", "/plan" | 6-bước feature planning |
-| `workflow-debug.md` | "debug", "fix bug", "/debug" | Systematic debugging |
-| `workflow-tdd.md` | "viết test", "tdd", "/tdd-workflow" | TDD với Bun + Playwright + RAGAS |
-| `workflow-code-review.md` | "review code", "/code-review" | Review toàn diện (kể cả files user đề cập) |
+| `workflow-plan.md` | "build feature", "tạo feature", `/plan` | 6-bước feature planning |
+| `workflow-debug.md` | "debug", "fix bug", `/debug` | Systematic debugging |
+| `workflow-tdd.md` | "viết test", "tdd", `/tdd-workflow` | TDD với Bun + Playwright + RAGAS |
+| `workflow-code-review.md` | "review code", `/code-review` | Review toàn diện |
 
 ---
 
@@ -211,17 +213,22 @@
 
 ### Khi cần update vendor skill
 ```powershell
-cd d:\DevVerse\.tmp\superpowers
+cd d:\LurnKode\.tmp\superpowers
 git pull
 # Copy lại SKILL.md nếu có changes quan trọng
 ```
 
-### Tech stack decisions (đã xác nhận 06/09/2026)
-- ✅ Backend: **Bun + ElysiaJS** — `fastapi` skill đã prune
-- ✅ Git: **Feature branch workflow**
-- ✅ `agents/backend-engineer.md` đã cập nhật
-- ⏳ Frontend: TBD (Next.js App Router được đề xuất)
-- ⏳ LLM: TBD (Gemini vs OpenAI — xem `docs/guides/tech-stack.md`)
+### Tech stack decisions (xác nhận theo Đề án LurnKode)
+- ✅ **Frontend**: Next.js + TypeScript (App Router)
+- ✅ **Backend**: Bun + ElysiaJS — `fastapi` skill đã prune
+- ✅ **Database**: PostgreSQL + Drizzle ORM + pgvector
+- ✅ **Queue/Cache**: Redis
+- ✅ **Code Execution**: Judge Worker → Docker Sandbox (1 CPU, 128MB, 3s)
+- ✅ **AI**: LLM + Embeddings + RAG (course-grounded)
+- ✅ **Deployment**: Docker + CI/CD (GitHub Actions)
+- ✅ **Git**: Feature branch workflow
+- ℹ️ **LLM Provider**: TBD (Gemini vs OpenAI — xem `docs/guides/tech-stack.md`)
+- ℹ️ **Supabase**: Có thể dùng làm managed PostgreSQL hosting (không phải tech layer chính)
 
 ### Khi thêm skill mới
 - Cập nhật file này với entry mới

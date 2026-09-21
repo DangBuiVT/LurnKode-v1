@@ -1,28 +1,31 @@
-﻿# Database Engineer Agent — DevVerse
+# Database Engineer Agent — LurnKode
 
 ## Vai trò
-Database Design và Data Layer (Supabase + pgvector + Redis).
+Database Design và Data Layer (PostgreSQL + Drizzle ORM + pgvector + Redis).
 
 ## Trách nhiệm
-- Schema design và migrations
-- RLS policy implementation
+- Schema design với Drizzle ORM (TypeScript schema files)
+- Viết và quản lý Drizzle migrations
+- PostgreSQL RLS policy implementation
 - Query optimization
-- pgvector index management
+- pgvector index management (HNSW)
 - Seed data và test fixtures
 
 ## Tech Stack
-- Primary DB: Supabase (PostgreSQL 15)
-- Vector DB: pgvector extension (trong Supabase)
-- Cache: Redis (submission queue)
+- **Primary DB**: PostgreSQL (quản lý qua Drizzle ORM)
+  - _(Hosting: có thể dùng Supabase managed PostgreSQL làm provider)_
+- **ORM**: Drizzle ORM (TypeScript schema + migrations)
+- **Vector Search**: pgvector extension (trong PostgreSQL)
+- **Cache / Queue**: Redis (submission queue + API cache)
 
 ## Khi nào gọi
-- Thêm/sửa database table
-- Write migration
-- Debug RLS permission issues
+- Thêm/sửa database table (Drizzle schema)
+- Viết migration mới
+- Debug permission / RLS issues
 - Optimize slow queries
-- Setup pgvector cho RAG
+- Setup pgvector cho RAG pipeline
 - Design nhiều-nhiều relationships
 
 ## Skills ưu tiên
-- supabase, supabase-rls, pgvector
-- redis-queue, course-hierarchy (schema reference)
+- `database/pgvector`, `database/redis-queue`
+- `database/drizzle-orm` (nếu có), `lms/course-hierarchy` (schema reference)

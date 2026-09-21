@@ -1,141 +1,192 @@
-# DevVerse — Evidence-Based LMS
+# LurnKode — AI-Assisted Learning Platform with Evidence-Based Tutoring and Automated Code Assessment
 
 > **CO3103 · HK261** | Môn: Cloud Programming  
 > **Nhóm 6 thành viên** | Timeline: Tuần 39–49
 
-**DevVerse** là một Learning Management System (LMS) tích hợp hai thành phần AI nâng cao:
+**LurnKode** là một Learning Management System (LMS) dành cho lập trình viên, tích hợp các thành phần AI và đánh giá tự động:
 
-- 🤖 **AI Tutor có căn cứ (RAG)** — trả lời dựa trên học liệu khóa học, trích nguồn rõ ràng
-- 🛡️ **Đánh giá tự động & Liêm chính học thuật** — chấm bài, random đề, phát hiện bất thường
+- 📚 **Core LMS** — Quản lý khóa học, tiến độ học, thảo luận, thông báo
+- 🤖 **AI Tutor có căn cứ (RAG)** — Trả lời dựa trên học liệu khóa học, trích nguồn rõ ràng
+- 📝 **Đánh giá MCQ & Lập trình** — Chấm điểm tự động, lịch sử làm bài, kết quả học viên
+- ⚙️ **Judge Worker tự động** — Hàng chờ nộp bài → Docker Sandbox → Hidden Tests → Kết quả
+- 🛡️ **Giám sát tính liêm chính** — Ghi nhận sự kiện bất thường, Instructor review
 
 ---
 
-## 🏗️ Architecture Overview
+## 🏗️ Kiến trúc Hệ thống
 
+```mermaid
+graph TD
+    A["Next.js Frontend (TypeScript)"] -->|REST API / HTTPS| B["Bun + ElysiaJS Backend"]
+    B --> C["PostgreSQL + pgvector\n(Drizzle ORM)"]
+    B --> D["Redis\n(Cache + Submission Queue)"]
+    B --> E["RAG Service\n(Embedding + Vector Retrieval + LLM)"]
+    D --> F["Judge Worker"]
+    F --> G["Docker Sandbox\n(Isolated Code Execution)"]
+    G --> H["Hidden Tests → Test Result"]
+    E --> C
 ```
-Browser / Mobile Web
-        │ HTTPS
-        ▼
-┌─────────────────────────────────┐
-│  Frontend (Next.js App Router)  │ ← TBD (Next.js được đề xuất)
-│  TypeScript · Vercel/Netlify    │
-└────────────────┬────────────────┘
-                 │ REST API · JWT
-                 ▼
-┌─────────────────────────────────┐
-│  Backend API (Bun + ElysiaJS)   │ ← ĐÃ CHỐT
-│  TypeScript · Docker · Railway  │
-└────┬──────────┬─────────────────┘
-     │          │          │
-     ▼          ▼          ▼
-┌──────────┐ ┌────────┐ ┌──────────────────┐
-│ Supabase │ │ Redis  │ │    Judge0         │
-│ Postgres │ │ BullMQ │ │ (Code Execution) │
-│ pgvector │ │ Cache  │ │ Self-hosted       │
-│ Auth     │ └────────┘ └──────────────────┘
-│ Storage  │
-└──────────┘
-     │
-     ▼
-┌──────────────────────────────────┐
-│  RAG / AI Layer                  │
-│  Embed → pgvector → LLM API      │
-│  (Gemini Flash / GPT-4o-mini)    │
-└──────────────────────────────────┘
+
+**Luồng chính:**
 ```
+Next.js Frontend
+      |
+      | REST API
+      v
+Bun + ElysiaJS
+      |
+      +-------------------+
+      |                   |
+      v                   v
+PostgreSQL + pgvector    Redis
+      |                   |
+      v                   v
+RAG Service         Submission Queue
+(Retrieval + LLM)         |
+                          v
+                    Judge Worker
+                          |
+                          v
+                    Docker Sandbox
+                          |
+                          v
+                    Hidden Tests → Result
+```
+
+**Ranh giới kiến trúc quan trọng:**
+- Next.js là lớp UI — không chứa business logic
+- Bun + ElysiaJS là lớp REST API — không truy cập DB trực tiếp từ frontend
+- PostgreSQL là data store chính; pgvector xử lý vector/embedding
+- Redis quản lý cache và hàng chờ bài nộp
+- RAG Service xử lý truy vấn AI từ học liệu đã được publish
+- Judge Worker chạy riêng biệt, code học viên chỉ chạy bên trong Docker Sandbox
+- Submitted code là untrusted code — **tuyệt đối không chạy trực tiếp trong API process**
 
 ---
 
 ## 🧱 Tech Stack
 
-### Đã xác nhận ✅
-
 | Layer | Technology | Ghi chú |
 |---|---|---|
-| **Backend** | Bun + ElysiaJS (TypeScript) | Eden type sharing giữa FE–BE |
-| **Database** | Supabase (PostgreSQL) | Auth, RLS, Storage built-in |
-| **Vector DB** | pgvector (trong Supabase) | HNSW index, cosine similarity |
-| **Queue** | Redis + BullMQ | Judge0 submission queue |
-| **Code Judge** | Judge0 (self-hosted Docker) | 60+ ngôn ngữ, Apache 2.0 |
-| **CI/CD** | GitHub Actions | Feature branch → PR → merge |
-| **Anti-cheat** | AST structural detection | Jaccard similarity, ≥85% flag |
-| **RAG eval** | RAGAS framework | Faithfulness + Answer Relevancy |
-| **Repo** | Monorepo | `apps/web`, `apps/api`, `infra/` |
-| **Git** | Feature branch workflow | 1 branch/feature, CI trước merge |
-
-### Chưa chốt ⏳
-
-| Layer | Options | Ghi chú |
-|---|---|---|
-| **Frontend** | Next.js App Router *(đề xuất)* vs React+Vite | Next.js phù hợp hơn cho LMS (SSR, routing) |
-| **Frontend hosting** | Vercel vs Netlify | Quyết định khi deploy lần đầu |
-| **LLM Provider** | `gemini-3.8-flash` vs `gpt-4o-mini` | Xem [`tech-stack.md`](./docs/guides/tech-stack.md) |
-| **Backend deploy** | Docker local → Railway | Local trước, Railway cho production |
+| **Frontend** | Next.js + TypeScript | App Router, SSR, file-based routing |
+| **Backend** | Bun + ElysiaJS | TypeScript, Eden type sharing FE–BE |
+| **API** | REST API | Primary FE–BE integration |
+| **Database** | PostgreSQL | Primary relational data store |
+| **ORM** | Drizzle ORM | Type-safe schema, migrations |
+| **Vector Search** | pgvector | HNSW index, cosine similarity, RAG |
+| **Cache / Queue** | Redis | Caching + submission queue |
+| **AI** | LLM + Embeddings + RAG | Course-grounded evidence-based tutor |
+| **Code Execution** | Docker Sandbox | Isolated, resource-limited sandbox |
+| **Deployment** | Docker + CI/CD | GitHub Actions, feature branch workflow |
 
 ---
 
-## 🎯 Functional Scope
+## 🎯 Phạm vi Chức năng (MVP)
 
-### Core LMS
-
+### Learning Management
 | Module | Mô tả |
 |---|---|
-| **Auth & RBAC** | Student / Instructor / Admin, Supabase Auth + JWT |
-| **Course Management** | Tạo/sửa/xuất bản, chapter → lesson → material |
+| **Auth & RBAC** | Learner / Instructor / Admin, JWT |
+| **Course Management** | Tạo/sửa/publish, Chapter → Lesson → Material |
 | **Enrollment & Progress** | Enroll, mark completed, resume, % tiến độ |
-| **Assessment** | Question bank, quiz, deadline, auto/manual grading |
-| **Interaction** | Discussion, Q&A, notifications |
-| **Administration** | User/course management, audit log, analytics |
+| **Discussions** | Thảo luận trong khóa học |
+| **Notifications** | Thông báo hệ thống |
 
-### Advanced Component 1 — RAG AI Tutor
+### Assessment
+| Module | Mô tả |
+|---|---|
+| **MCQ** | Câu hỏi trắc nghiệm, auto grading |
+| **Programming Exercises** | Bài tập lập trình, auto judge |
+| **Automated Grading** | Chấm điểm tự động qua hidden tests |
+| **Attempt History** | Lịch sử làm bài |
+| **Integrity Monitoring** | Ghi nhận sự kiện bất thường cho Instructor review |
 
+### Administration
+| Module | Mô tả |
+|---|---|
+| **User Management** | Quản lý tài khoản |
+| **Course Management** | Quản trị khóa học |
+| **Basic Reporting** | Báo cáo cơ bản |
+| **Integrity Event Review** | Instructor xem xét sự kiện gian lận |
+
+### AI Tutor (RAG)
 ```
-Student Question
-    ↓ Embed (text-embedding model)
-pgvector cosine search → top-5 chunks
-    ↓
-Out-of-scope check (threshold 0.55)
-    ↓
-LLM generation (Gemini Flash / GPT-4o-mini)
-    ↓
-Answer + Citations (Course / Lesson / Material)
+Published Course Material
+      ↓ Chunking & Embedding
+pgvector → Vector Retrieval → Relevant Context
+      ↓
+LLM → Answer + Source Citation
 ```
-
+- Chỉ sử dụng học liệu đã được publish làm nguồn kiến thức
 - Câu hỏi ngoài phạm vi → **không hallucinate**, trả về thông báo rõ ràng
-- Mỗi câu trả lời phải kèm **citation** đủ để học viên quay lại bài học
-- Học viên có thể feedback → lưu để eval
+- Mỗi câu trả lời kèm citation đủ để học viên quay lại bài học
+- Học viên có thể feedback helpful/unhelpful
 
-**Evaluation**: RAGAS (Faithfulness ≥ 0.8, Answer Relevancy ≥ 0.7) vs Vanilla LLM baseline
-
-### Advanced Component 2 — Assessment & Academic Integrity
-
+### Code Judge
 ```
-Question Bank → Exam Blueprint → Randomized Exam → Attempt
-    ↓
-Auto Grading (objective) / Instructor Review (subjective)
-    ↓
-Integrity Detection (parallel):
-Code → AST parse → normalize → Jaccard similarity
-    → Flag if ≥ 85% → plagiarism_reports → Instructor review
+Code Submission
+      ↓
+Submission Queue (Redis)
+      ↓
+Judge Worker
+      ↓
+Docker Sandbox (1 CPU · 128MB RAM · 3s Timeout)
+      ↓
+Hidden Tests
+      ↓
+Result: AC / WA / TLE / RTE
 ```
 
-- Attempt states: `NOT_STARTED → IN_PROGRESS → SUBMITTED / EXPIRED → GRADED`
-- Integrity flag là **cảnh báo cho Instructor** — không tự kết luận gian lận
+> ⚠️ **Out of MVP scope**: Payment processing, Live streaming
 
 ---
 
 ## 📊 Data Model (High-Level)
 
 ```
+Learning Domain:
 User
- ├── Enrollment ──── Course
- │                     ├── Chapter → Lesson → Material
- │                     ├── QuestionBank → Question
- │                     └── Assessment → Attempt → Submission
- ├── AIConversation → AIMessage → Citation
- ├── Notification
- └── AuditLog
+ └── Enrollment
+       └── Course
+             └── Chapter
+                   └── Lesson
+                         └── Material
+                               └── RAGSource
+
+Assessment Domain:
+Course
+ └── Assessment
+       └── AssessmentItem (MCQ / Programming)
+
+User
+ └── Attempt
+       └── Answer
+       └── CodeSubmission
+             └── TestResult
+
+AI / Operations:
+User
+ └── AIConversation
+       └── AIMessage
+             └── Citation
+
+User └── Notification
+User / Admin └── AuditLog
 ```
+
+---
+
+## 🏛️ Kiến trúc Phát triển
+
+| Component | Vai trò |
+|---|---|
+| **Frontend** (`apps/web`) | Next.js UI — gọi REST API, không chứa business logic |
+| **API** (`apps/api`) | Bun + ElysiaJS — xử lý request, validation, RBAC |
+| **Database** | PostgreSQL + Drizzle ORM — schema, migrations, queries |
+| **Redis** | Cache API responses + Submission Queue |
+| **RAG Service** | Embed course material, vector search, LLM generation |
+| **Judge Worker** | Nhận job từ Redis Queue, gọi Docker Sandbox |
+| **Docker Sandbox** | Chạy code học viên bị cô lập, enforce resource limits |
 
 ---
 
@@ -155,7 +206,7 @@ User
 | **48** | Integration, testing, evaluation, bug fixing |
 | **49** | Benchmark, documentation, demo, final report |
 
-**Priority order**: Core LMS → Assessment → RAG AI → Integrity → Integration & Eval
+**Thứ tự ưu tiên**: Core LMS → Assessment → RAG AI → Integrity → Integration & Eval
 
 ---
 
@@ -167,8 +218,8 @@ User
 | **Course & Learning** | Course management, enrollment, progress, learning flow |
 | **Assessment** | Question bank, exam generation, submission, grading |
 | **AI / RAG** | Chunking, embeddings, retrieval, LLM, citation, eval |
-| **Frontend / UX** | Student/Instructor UI, AI chat, dashboard, responsive |
-| **Integrity / QA / DevOps** | Anti-cheat, audit log, testing, CI/CD, deployment |
+| **Frontend / UX** | Learner/Instructor UI, AI chat, dashboard, responsive |
+| **Integrity / QA / DevOps** | Integrity monitoring, audit log, testing, CI/CD, deployment |
 
 ---
 
@@ -177,7 +228,7 @@ User
 | Metric | Target |
 |---|---|
 | API response (p95) | < 500ms |
-| Code execution (Judge0) | < 2s |
+| Code execution (Judge) | < 3s |
 | RAG query latency | < 3s |
 | Frontend LCP | < 2.5s |
 | Test coverage | ≥ 80% |
@@ -189,20 +240,8 @@ User
 - **Test coverage ≥ 80%** — enforced trong GitHub Actions CI
 - **Code review** bắt buộc trước khi merge (feature branch workflow)
 - **No secrets in git** — `.env` không commit, dùng GitHub Secrets
-- **RLS trên tất cả tables** — Supabase Row Level Security
+- **PostgreSQL RLS** trên tất cả tables
 - **CORS strict** — origin whitelist, không dùng `*` ở production
-
----
-
-## 📁 Docs
-
-| File | Mô tả |
-|---|---|
-| [`docs/guides/tech-stack.md`](./docs/guides/tech-stack.md) | Kiến trúc chi tiết, stack decisions, LLM options |
-| [`docs/guides/getting-started.md`](./docs/guides/getting-started.md) | Setup môi trường dev từ đầu |
-| [`docs/guides/environment-setup.md`](./docs/guides/environment-setup.md) | Cấu hình `.env` cho mọi môi trường |
-| [`docs/README.md`](./docs/README.md) | Mục lục đầy đủ docs |
-| [`.agents/skill-manifest.md`](./.agents/skill-manifest.md) | Danh sách skills AI agent + maintenance |
 
 ---
 
@@ -215,3 +254,15 @@ User
 | False positive integrity flag | Warning only, không tự kết luận; instructor review evidence |
 | Scope quá lớn cho 6 người | Prioritize Must-Have trước; Advanced features sau |
 | LLM cost / latency | Cache embedding, pre-index, top-k retrieval, avoid unnecessary LLM calls |
+
+---
+
+## 📁 Docs
+
+| File | Mô tả |
+|---|---|
+| [`docs/guides/tech-stack.md`](./docs/guides/tech-stack.md) | Kiến trúc chi tiết, stack decisions, LLM options |
+| [`docs/guides/getting-started.md`](./docs/guides/getting-started.md) | Setup môi trường dev từ đầu |
+| [`docs/guides/environment-setup.md`](./docs/guides/environment-setup.md) | Cấu hình `.env` cho mọi môi trường |
+| [`docs/README.md`](./docs/README.md) | Mục lục đầy đủ docs |
+| [`.agents/skill-manifest.md`](./.agents/skill-manifest.md) | Danh sách skills AI agent + maintenance |

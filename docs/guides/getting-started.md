@@ -1,7 +1,7 @@
-# Getting Started — DevVerse
+# Getting Started — LurnKode
 
-> Hướng dẫn setup môi trường dev từ đầu cho team members mới.
-> **Stack đã xác nhận**: Bun + ElysiaJS (Backend) · Supabase · Redis · Judge0
+> Hướng dẫn setup môi trường dev từ đầu cho team members mới.  
+> **Stack đã xác nhận**: Next.js + TypeScript (Frontend) · Bun + ElysiaJS (Backend) · PostgreSQL + Drizzle ORM · Redis · Docker Sandbox
 
 ---
 
@@ -10,7 +10,7 @@
 Cài đặt các tools sau trước khi bắt đầu:
 
 ```bash
-# Bun >= 1.1 (KHÔNG dùng Node — backend chạy trên Bun)
+# Bun >= 1.1 (KHÔNG dùng Node thuần — backend chạy trên Bun)
 bun --version   # >= 1.1.x
 # Cài Bun: https://bun.sh
 curl -fsSL https://bun.sh/install | bash   # macOS/Linux
@@ -19,12 +19,11 @@ powershell -c "irm bun.sh/install.ps1 | iex"  # Windows
 # Git
 git --version
 
-# Docker Desktop (cần cho Judge0 + Supabase local)
+# Docker Desktop (cần cho Docker Sandbox + PostgreSQL local)
 docker --version
 
-# Supabase CLI
-npm install -g supabase   # hoặc: brew install supabase/tap/supabase
-supabase --version
+# Node.js >= 18 (chỉ cho Next.js frontend nếu không dùng Bun cho FE)
+node --version
 ```
 
 ---
@@ -32,8 +31,8 @@ supabase --version
 ## 1. Clone Repository
 
 ```bash
-git clone https://github.com/YOUR_ORG/devverse.git
-cd devverse
+git clone https://github.com/YOUR_ORG/lurnkode.git
+cd lurnkode
 ```
 
 ---
@@ -45,7 +44,7 @@ cd devverse
 cd apps/api
 bun install
 
-# Frontend (TBD — Next.js hoặc React+Vite)
+# Frontend (Next.js)
 cd apps/web
 bun install   # hoặc: npm install
 ```
@@ -66,67 +65,68 @@ cp .env.example .env
 
 ```env
 # Backend: apps/api/.env
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=...
-LLM_PROVIDER=gemini                        # hoặc: openai
-GEMINI_API_KEY=...                         # nếu dùng Gemini
-OPENAI_API_KEY=sk-...                      # nếu dùng OpenAI
-JUDGE0_URL=http://localhost:2358
-JUDGE0_AUTH=your_secret_token
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lurnkode
 REDIS_URL=redis://localhost:6379
+LLM_PROVIDER=gemini                        # hoặc: openai
+GEMINI_API_KEY=...
+OPENAI_API_KEY=sk-...
 ALLOWED_ORIGINS=http://localhost:3000
 PORT=3001
 
 # Frontend: apps/web/.env.local
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
 ---
 
-## 4. Setup Supabase Local Dev
+## 4. Setup PostgreSQL + pgvector (Docker)
 
 ```bash
-# Init Supabase local (lần đầu)
-supabase init
+# Khởi động PostgreSQL local với pgvector
+cd infra/db
+docker compose up -d
 
-# Link đến cloud project
-supabase link --project-ref YOUR_PROJECT_REF
+# Apply Drizzle migrations
+cd apps/api
+bun run db:migrate
 
-# Start local Supabase (PostgreSQL + Studio + Auth + Storage)
-supabase start
-
-# Apply migrations
-supabase db reset
+# Seed data (nếu có)
+bun run db:seed
 ```
 
-Sau khi `supabase start`:
-- **Studio**: http://localhost:54323
-- **API**: http://localhost:54321
-- **DB**: `postgresql://postgres:postgres@localhost:54322/postgres`
-
----
-
-## 5. Bật pgvector Extension
-
-Trong SQL Editor của Supabase Studio, chạy:
+Sau khi khởi động:
+- **PostgreSQL**: `postgresql://postgres:postgres@localhost:5432/lurnkode`
 
 ```sql
+-- Bật pgvector extension (lần đầu)
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Verify
 SELECT * FROM pg_extension WHERE extname = 'vector';
 ```
 
+> ℹ️ Nếu dùng **Supabase** làm managed PostgreSQL hosting, thay bước này bằng cấu hình Supabase URL + pgvector sẽ được bật tự động.
+
 ---
 
-## 6. Chạy Judge0 Local (Docker)
-
-Judge0 cần Docker. Chạy lần đầu sẽ pull image (~2 phút):
+## 5. Setup Redis (Docker)
 
 ```bash
-cd infra/judge0
+# Khởi động Redis local
+docker run -d -p 6379:6379 --name lurnkode-redis redis:alpine
+
+# Verify
+redis-cli ping   # → PONG
+```
+
+---
+
+## 6. Setup Docker Sandbox (Judge Worker)
+
+Docker Sandbox dùng để chạy submitted code trong môi trường cô lập.
+
+```bash
+cd infra/judge
 docker compose up -d
 
 # Verify health
@@ -134,7 +134,8 @@ curl http://localhost:2358/system_info
 # → {"version":"1.x.x", ...}
 ```
 
-> 💡 Judge0 cần Redis. Docker Compose đã include Redis — không cần cài riêng.
+> 💡 Judge Worker cần Docker và Redis. Docker Compose đã include cả hai.  
+> ⚙️ Resource limits được enforce: **1 CPU core, 128MB RAM, 3s Timeout**
 
 ---
 
@@ -146,13 +147,14 @@ cd apps/api
 bun run dev
 # → API chạy tại http://localhost:3001
 
-# Terminal 2 — Frontend (TBD)
+# Terminal 2 — Frontend (Next.js)
 cd apps/web
 bun run dev   # hoặc: npm run dev
 # → Frontend tại http://localhost:3000
 
-# Terminal 3 — Supabase local (nếu chưa chạy)
-supabase start
+# Terminal 3 — Judge Worker (nếu chưa chạy qua Docker)
+cd apps/judge-worker
+bun run dev
 ```
 
 ---
@@ -176,18 +178,35 @@ bun run test:e2e                # Playwright E2E
 
 ---
 
-## 9. Verify Setup
+## 9. Drizzle ORM — Quản lý Database
+
+```bash
+cd apps/api
+
+# Tạo migration mới sau khi thay đổi schema
+bun run db:generate
+
+# Apply migrations
+bun run db:migrate
+
+# Xem Drizzle Studio (UI quản lý DB)
+bun run db:studio
+```
+
+---
+
+## 10. Verify Setup
 
 ```bash
 # API health check
 curl http://localhost:3001/health
 # → {"status":"ok","version":"0.1.0"}
 
-# Judge0 health
+# Judge Worker health
 curl http://localhost:2358/system_info
 
-# Supabase local
-curl http://localhost:54321/rest/v1/ -H "apikey: YOUR_ANON_KEY"
+# Redis check
+redis-cli ping   # → PONG
 ```
 
 ---
@@ -212,14 +231,15 @@ git push origin feat/your-feature-name
 ## Troubleshooting
 
 | Lỗi | Nguyên nhân | Fix |
-|---|---|---|
-| `supabase start` fail | Docker chưa chạy | Mở Docker Desktop |
-| `401 Unauthorized` | Token sai hoặc hết hạn | Check `SUPABASE_ANON_KEY` |
-| `permission denied` (Supabase) | RLS block | Check policy cho table đó |
-| Judge0 không respond | Docker chưa start | `cd infra/judge0 && docker compose up -d` |
+|---|---|---| 
+| PostgreSQL connection refused | Docker chưa chạy | `docker compose up -d` trong `infra/db` |
+| `401 Unauthorized` | JWT token sai hoặc hết hạn | Check `Authorization` header |
+| `permission denied` (DB) | RLS block | Check policy cho table đó |
+| Judge Worker không respond | Docker chưa start | `cd infra/judge && docker compose up -d` |
 | `pgvector not found` | Extension chưa bật | `CREATE EXTENSION vector;` |
 | Bun command not found | Bun chưa cài | Cài tại https://bun.sh |
 | Port 3001 busy | Process cũ chưa kill | `lsof -ti:3001 \| xargs kill` |
+| Redis connection refused | Redis chưa chạy | `docker run -d -p 6379:6379 redis:alpine` |
 
 ---
 

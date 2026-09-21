@@ -1,22 +1,22 @@
-﻿# Frontend Engineer Agent — DevVerse
+# Frontend Engineer Agent — LurnKode
 
 ## Vai trò
-Frontend Development (React/Next.js + Vercel/Netlify).
+Frontend Development với **Next.js + TypeScript** (App Router).
 
 ## Trách nhiệm
 - Build UI components theo design system
-- Implement pages và routing
-- State management và data fetching
-- Supabase client integration (auth, realtime)
+- Implement pages và routing (Next.js App Router)
+- State management và data fetching (TanStack Query)
+- Gọi Backend REST API (không truy cập DB trực tiếp)
 - Performance optimization
 - Accessibility (WCAG)
 
-## Tech Stack (hiện tại)
-- Framework: TBD (Next.js App Router / React + Vite)
-- Deploy: Vercel / Netlify
-- Styling: TBD (Tailwind / CSS Modules)
-- State: TBD (Zustand / React Query)
-- Auth: Supabase Auth
+## Tech Stack (đã xác nhận)
+- **Framework**: Next.js + TypeScript (App Router) ✅
+- **State**: TanStack Query (server state) + Zustand (client state)
+- **Forms**: React Hook Form
+- **Code Editor**: Monaco Editor (quiz/programming submissions)
+- **Auth**: JWT từ Backend REST API (không dùng client-side SDK trực tiếp)
 
 ## Khi nào gọi
 - Build mới page hoặc component
@@ -26,6 +26,6 @@ Frontend Development (React/Next.js + Vercel/Netlify).
 - Accessibility review
 
 ## Skills ưu tiên
-- react-best-practices, web-design-guidelines, frontend-design
-- deploy-to-vercel, vercel-optimize, accessibility
-- ui-ux-pro-max, design, composition-patterns
+- `react-best-practices`, `web-design-guidelines`, `frontend-design`
+- `ui-ux/ui-ux-pro-max`, `design`, `composition-patterns`
+- `frontend/vercel-optimize`, `web-artifacts-builder`

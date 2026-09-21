@@ -1,6 +1,6 @@
-# DevVerse — Docs Index
+# LurnKode — Docs Index
 
-> **CO3103 · HK261** | LMS + RAG AI Tutor + Assessment & Academic Integrity
+> **CO3103 · HK261** | LMS + RAG AI Tutor + Automated Code Assessment
 
 ---
 
@@ -9,8 +9,8 @@
 | File | Mô tả | Status |
 |---|---|---|
 | [tech-stack.md](./guides/tech-stack.md) | Kiến trúc tổng quan, stack decisions, LLM options | ✅ Cập nhật |
-| [getting-started.md](./guides/getting-started.md) | Setup môi trường dev từ đầu | ⚠️ Cần update cho Bun |
-| [environment-setup.md](./guides/environment-setup.md) | Cấu hình `.env` mọi môi trường | ⚠️ Cần update LLM key |
+| [getting-started.md](./guides/getting-started.md) | Setup môi trường dev từ đầu | ✅ Cập nhật |
+| [environment-setup.md](./guides/environment-setup.md) | Cấu hình `.env` mọi môi trường | ✅ Cập nhật |
 
 ---
 
@@ -24,52 +24,57 @@
 
 ---
 
-## 🏗️ Tech Stack (tóm tắt)
-
-### Đã chốt ✅
+## 🏗️ Tech Stack (đã xác nhận)
 
 | Layer | Technology |
 |---|---|
-| Backend | **Bun + ElysiaJS** (TypeScript) |
-| Database | Supabase (PostgreSQL + pgvector + Auth) |
-| Queue | Redis + BullMQ |
-| Code Judge | Judge0 (self-hosted Docker) |
-| CI/CD | GitHub Actions · Feature branch workflow |
-| Anti-cheat | AST structural detection (Jaccard ≥ 85%) |
-| RAG eval | RAGAS (Faithfulness + Answer Relevancy) |
-
-### Chưa chốt ⏳
-
-| Layer | Options |
-|---|---|
-| Frontend | Next.js App Router *(đề xuất)* vs React+Vite |
-| LLM Provider | `gemini-3.8-flash` vs `gpt-4o-mini` |
-| Backend deploy | Docker local → Railway |
+| **Frontend** | **Next.js + TypeScript** (App Router) |
+| **Backend** | **Bun + ElysiaJS** (TypeScript) |
+| **API** | REST API |
+| **Database** | PostgreSQL + Drizzle ORM |
+| **Vector Search** | pgvector (trong PostgreSQL) |
+| **Queue / Cache** | Redis |
+| **AI** | LLM + Embeddings + RAG (course-grounded) |
+| **Code Execution** | Judge Worker → Docker Sandbox |
+| **CI/CD** | GitHub Actions · Feature branch workflow |
 
 > Xem chi tiết tại [`tech-stack.md`](./guides/tech-stack.md)
 
 ---
 
-## 🎯 Functional Modules
+## 🎯 Functional Modules (MVP)
 
-### Core LMS
-- Auth & RBAC (Student / Instructor / Admin)
+### Learning Management
+- Auth & RBAC (Learner / Instructor / Admin)
 - Course → Chapter → Lesson → Material
 - Enrollment & Learning Progress
-- Assessment (quiz, assignment, auto/manual grading)
-- Discussion, Notifications, Audit Log
+- Discussions, Notifications, Audit Log
 
-### Advanced Component 1 — RAG AI Tutor
-- Retrieval-Augmented Generation từ học liệu khóa học
-- Citation bắt buộc (Course / Lesson / Material)
+### Assessment
+- MCQ (Multiple Choice Questions)
+- Programming Exercises với Automated Judging
+- Auto grading + Instructor review
+- Attempt History & Learner Results
+
+### Administration
+- User management, Course management
+- Basic reporting, Learner monitoring
+- Integrity Event review
+
+### AI Tutor (RAG)
+- Retrieval-Augmented Generation từ học liệu khóa học đã published
+- Citation bắt buộc (Course / Chapter / Lesson / Material)
 - Out-of-scope handling — không hallucinate
-- User feedback + RAGAS evaluation
+- User feedback (helpful/unhelpful)
 
-### Advanced Component 2 — Assessment & Academic Integrity
-- Question bank + randomized exam generation
-- Auto grading + rubric/instructor review
-- AST-based plagiarism detection → warning cho instructor
-- Attempt state machine: `NOT_STARTED → IN_PROGRESS → SUBMITTED/EXPIRED → GRADED`
+### Code Judge
+- Submission Queue (Redis) → Judge Worker → Docker Sandbox
+- Resource limits: 1 CPU core, 128MB RAM, 3s Timeout
+- Results: AC / WA / TLE / RTE
+
+### ⚠️ Out of MVP Scope
+- Payment processing
+- Live streaming
 
 ---
 
@@ -80,7 +85,7 @@
 | Test coverage | ≥ 80% (enforced trong CI) |
 | Code review | Bắt buộc trước merge |
 | Secrets | `.env` không commit — dùng GitHub Secrets |
-| RLS | Tất cả Supabase tables có Row Level Security |
+| RLS | Tất cả PostgreSQL tables có Row Level Security |
 | CORS | Origin whitelist — không dùng `*` production |
 
 ---
@@ -93,5 +98,5 @@
 | 41–43 | Core LMS (Auth, Course, Enrollment, Progress) |
 | 44 | Assessment (Question bank, exam, grading) |
 | 45–46 | RAG AI Tutor (indexing, retrieval, citation) |
-| 47 | Integrity detection, random exam, auto grading |
+| 47 | Integrity monitoring, auto grading, submissions |
 | 48–49 | Integration, testing, benchmark, demo |

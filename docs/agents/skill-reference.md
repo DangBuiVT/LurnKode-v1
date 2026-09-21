@@ -1,6 +1,6 @@
-# Skill Reference — DevVerse
+# Skill Reference — LurnKode
 
-> Danh sách đầy đủ tất cả skills, khi nào dùng, và nguồn gốc.
+> Danh sách đầy đủ tất cả skills, khi nào dùng, và nguồn gốc.  
 > ⭐ = Critical skill — phải đọc trước khi implement feature liên quan.
 
 ---
@@ -9,10 +9,10 @@
 
 | File | Trigger | Mô tả |
 |---|---|---|
-| `.agents/rules/workflow-plan.md` | "build feature", "implement", "/plan" | 6-bước feature planning (Context → DB → BE → FE → Test → Review) |
+| `.agents/rules/workflow-plan.md` | "build feature", "implement", `/plan` | 6-bước feature planning (Context → DB → BE → FE → Test → Review) |
 | `.agents/rules/workflow-debug.md` | "debug", "fix bug", "lỗi" | Systematic debug + phân loại bug theo lớp |
-| `.agents/rules/workflow-tdd.md` | "viết test", "tdd", nêu vấn đề | **TDD mode** + **Architecture Debug mode** (audit 6 lớp, Root Cause Map) |
-| `.agents/rules/workflow-code-review.md` | "review code", "/code-review" | Architecture review + Security audit toàn hệ thống + Improvement suggestions |
+| `.agents/rules/workflow-tdd.md` | "viết test", "tdd", nêu vấn đề | **TDD mode** + **Architecture Debug mode** |
+| `.agents/rules/workflow-code-review.md` | "review code", `/code-review` | Architecture review + Security audit toàn hệ thống |
 
 ---
 
@@ -39,9 +39,9 @@
 
 | Skill | Nguồn | Khi nào dùng |
 |---|---|---|
-| `ai/rag-pgvector` ⭐ | Custom (DevVerse) | **Build AI Tutor RAG pipeline** — chunking, HNSW, cosine search |
-| `ai/ragas-eval` ⭐ | Custom (DevVerse) | **RAGAS evaluation** — Faithfulness ≥ 0.8, Answer Relevancy ≥ 0.7 |
-| `ai/rag-citation` ⭐ | Custom (DevVerse) | **Citation format + out-of-scope handling** (threshold 0.55) |
+| `ai/rag-pgvector` ⭐ | Custom (LurnKode) | **Build AI Tutor RAG pipeline** — chunking, HNSW, cosine search |
+| `ai/ragas-eval` ⭐ | Custom (LurnKode) | **RAG evaluation** — Recall@K, Precision@K, Grounding, Citation |
+| `ai/rag-citation` ⭐ | Custom (LurnKode) | **Citation format + out-of-scope handling** (threshold 0.55) |
 | `ai/langchain-rag` | langchain-ai/skills | LangChain RAG patterns tham khảo |
 | `ai/langchain-fundamentals` | langchain-ai/skills | LangChain cơ bản |
 | `ai/eval-engineering` | langchain-ai/skills | Evaluation engineering patterns |
@@ -54,13 +54,12 @@
 
 | Skill | Nguồn | Khi nào dùng |
 |---|---|---|
-| `lms/judge0-integration` ⭐ | Custom (DevVerse) | **Build submission/judge endpoint** — lifecycle, base64, async poll |
-| `lms/ast-plagiarism` ⭐ | Custom (DevVerse) | **AST plagiarism detection** — normalize, Jaccard ≥ 85% flag |
-| `lms/sandbox-security` ⭐ | Custom (DevVerse) | **Security review sandbox code** — resource limits, injection |
-| `lms/rbac-lms` ⭐ | Custom (DevVerse) | **Student / Instructor / Admin RBAC** patterns |
-| `lms/course-hierarchy` ⭐ | Custom (DevVerse) | **Course → Chapter → Lesson → Material** data model |
-| `lms/quiz-engine` ⭐ | Custom (DevVerse) | **Quiz state machine, randomized exam, auto-grading** |
-| `lms/progress-tracking` ⭐ | Custom (DevVerse) | **Enrollment, completion tracking, resume learning** |
+| `lms/sandbox-security` ⭐ | Custom (LurnKode) | **Security review code Judge** — resource limits, Docker isolation, injection prevention |
+| `lms/judge0-integration` ⭐ | Custom (LurnKode) | **Judge Worker implementation** — Judge0 làm Docker-based execution engine, lifecycle, async |
+| `lms/rbac-lms` ⭐ | Custom (LurnKode) | **Learner / Instructor / Admin RBAC** patterns |
+| `lms/course-hierarchy` ⭐ | Custom (LurnKode) | **Course → Chapter → Lesson → Material** data model |
+| `lms/quiz-engine` ⭐ | Custom (LurnKode) | **Quiz state machine, randomized exam, auto-grading** |
+| `lms/progress-tracking` ⭐ | Custom (LurnKode) | **Enrollment, completion tracking, resume learning** |
 
 ---
 
@@ -68,9 +67,11 @@
 
 | Skill | Nguồn | Khi nào dùng |
 |---|---|---|
-| `database/supabase` ⭐ | Custom (DevVerse) | **Bất kỳ Supabase operation nào** — SDK, schema, storage |
-| `database/pgvector` ⭐ | Custom (DevVerse) | **Vector search, embedding, HNSW index** |
-| `database/redis-queue` ⭐ | Custom (DevVerse) | **Submission queue với BullMQ** — job lifecycle, retry |
+| `database/pgvector` ⭐ | Custom (LurnKode) | **Vector search, embedding, HNSW index** cho RAG |
+| `database/redis-queue` ⭐ | Custom (LurnKode) | **Submission queue với Redis** — job lifecycle, retry |
+| `database/drizzle-orm` ⭐ | Custom (LurnKode) | **PostgreSQL schema + Drizzle ORM migrations** |
+
+> ℹ️ `database/supabase` — Nếu dùng Supabase làm managed PostgreSQL hosting, skill này hỗ trợ các Supabase-specific patterns (như pgvector trong Supabase). Không phải tech stack chính.
 
 ---
 
@@ -78,11 +79,11 @@
 
 | Skill | Nguồn | Khi nào dùng |
 |---|---|---|
-| `backend/elysiajs` ⭐ | Custom (DevVerse) | **PRIMARY** — Bun+ElysiaJS API: router, middleware, Eden type sharing |
+| `backend/elysiajs` ⭐ | Custom (LurnKode) | **PRIMARY** — Bun+ElysiaJS API: router, middleware, Eden type sharing |
 | `backend/domain-modeling` | mattpocock/skills | Data model design cho complex domains |
 | `backend/codebase-design` | mattpocock/skills | Architecture design, module boundaries |
 
-> ~~`backend/fastapi`~~ — **Đã loại bỏ** (team xác nhận Bun + ElysiaJS, 06/09/2026)
+> ~~`backend/fastapi`~~ — **Đã loại bỏ hoàn toàn** (team xác nhận Bun + ElysiaJS)
 
 ---
 
@@ -98,7 +99,7 @@
 | `frontend/react-view-transitions` | vercel-labs | Smooth page transitions |
 | `frontend/web-artifacts-builder` | anthropics/skills | Build web artifacts |
 
-> ⏳ **Frontend framework TBD**: Next.js App Router *(đề xuất)* vs React+Vite
+> **Frontend framework đã xác nhận**: **Next.js + TypeScript** (App Router)
 
 ---
 
@@ -119,10 +120,11 @@
 
 | Skill | Nguồn | Khi nào dùng |
 |---|---|---|
-| `security/supabase-rls` ⭐ | Custom (DevVerse) | **RLS policies — tất cả bảng phải có** |
-| `security/cors-strict` ⭐ | Custom (DevVerse) | **CORS config, API key security, headers** |
+| `security/cors-strict` ⭐ | Custom (LurnKode) | **CORS config, API key security, headers** |
 | `security/secrets-management` | arjunprabhulal | Secrets vault, rotation |
 | `security/security-scanning` | arjunprabhulal | Dependency scanning, SAST |
+
+> ℹ️ `security/supabase-rls` — Nếu dùng Supabase hosting, giữ lại cho Supabase-specific RLS patterns. Tầng chính là **PostgreSQL RLS**.
 
 ---
 
@@ -130,7 +132,7 @@
 
 | Skill | Nguồn | Khi nào dùng |
 |---|---|---|
-| `testing/coverage-80` ⭐ | Custom (DevVerse) | **CI coverage gate ≥ 80%** — `bun test --coverage` |
+| `testing/coverage-80` ⭐ | Custom (LurnKode) | **CI coverage gate ≥ 80%** — `bun test --coverage` |
 | `testing/webapp-testing` | anthropics/skills | Web app testing patterns |
 | `testing/tdd-mattpocock` | mattpocock/skills | TDD approach (mattpocock style) |
 
@@ -142,10 +144,9 @@
 
 | Skill | Nguồn | Khi nào dùng |
 |---|---|---|
-| `cicd/ci-pipelines` ⭐ | arjunprabhulal | **GitHub Actions setup** — test + coverage + deploy |
+| `cicd/ci-pipelines` ⭐ | arjunprabhulal | **GitHub Actions setup** — test + coverage + Docker build |
 | `cicd/deployment-strategies` | arjunprabhulal | Blue/green, canary, rolling deploy |
 | `cicd/pipeline-security` | arjunprabhulal | Secret scanning trong CI pipeline |
-| `cicd/deploy-to-vercel` | vercel-labs | Vercel deployment (nếu chọn Vercel) |
 | `cicd/continuous-delivery` | arjunprabhulal | CD best practices |
 | `cicd/build-optimization` | arjunprabhulal | Build time optimization |
 
@@ -155,8 +156,7 @@
 
 | Skill | Nguồn | Khi nào dùng |
 |---|---|---|
-| `infra/judge0-deploy` ⭐ | Custom (DevVerse) | **Deploy Judge0 lên Railway / local Docker** |
-| `infra/monorepo-structure` ⭐ | Custom (DevVerse) | **Monorepo layout, Bun workspaces** |
+| `infra/monorepo-structure` ⭐ | Custom (LurnKode) | **Monorepo layout, Bun workspaces** |
 | `infra/observability` | arjunprabhulal | Metrics, logging, tracing |
 | `infra/log-management` | arjunprabhulal | Log aggregation |
 | `infra/incident-response` | arjunprabhulal | Incident runbooks |
@@ -173,10 +173,9 @@
 | **Debug bug** | `workflow-debug` → `workflow-tdd` (Architecture Debug mode) |
 | **Code review** | `workflow-code-review` → `core/code-review` |
 | **AI Tutor (RAG)** | `ai/rag-pgvector` → `database/pgvector` → `ai/rag-citation` → `ai/ragas-eval` |
-| **Code Judge** | `lms/judge0-integration` → `lms/sandbox-security` → `database/redis-queue` |
-| **Anti-cheat** | `lms/ast-plagiarism` → `lms/sandbox-security` → `security/supabase-rls` |
-| **Database schema** | `database/supabase` → `security/supabase-rls` |
-| **Auth / RBAC** | `lms/rbac-lms` → `database/supabase` → `security/supabase-rls` |
+| **Code Judge (Docker Sandbox)** | `lms/sandbox-security` → `lms/judge0-integration` → `database/redis-queue` |
+| **Database schema** | `database/drizzle-orm` → `database/pgvector` → `lms/course-hierarchy` |
+| **Auth / RBAC** | `lms/rbac-lms` → `security/cors-strict` |
 | **UI / Frontend** | `ui-ux/ui-ux-pro-max` → `frontend/react-best-practices` |
 | **Testing** | `testing/coverage-80` → `testing/tdd-mattpocock` |
-| **Security review** | `workflow-code-review` (Security Audit section) → `security/supabase-rls` → `security/cors-strict` |
+| **Security review** | `workflow-code-review` (Security Audit section) → `lms/sandbox-security` → `security/cors-strict` |
