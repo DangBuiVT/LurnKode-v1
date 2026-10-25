@@ -1,0 +1,57 @@
+services:
+  assessment-service:
+    build:
+      context: .
+      target: development
+    container_name: lurnkode-assessment-service
+    restart: unless-stopped
+    ports:
+      - "4003:4003"
+    environment:
+      - NODE_ENV=development
+      - PORT=4003
+      - HOST=0.0.0.0
+      - DATABASE_URL=postgresql://postgres:postgres@postgres-assessment:5432/lurnkode_assessment?schema=public
+      - REDIS_URL=redis://redis-assessment:6379
+      - M2_COURSE_SERVICE_URL=http://course-service:4002
+      - INTERNAL_SERVICE_TOKEN=m3-internal-secret-token
+    depends_on:
+      - postgres-assessment
+      - redis-assessment
+    networks:
+      - lurnkode-network
+
+  postgres-assessment:
+    image: postgres:16-alpine
+    container_name: lurnkode-postgres-assessment
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=lurnkode_assessment
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_assessment_data:/var/lib/postgresql/data
+    networks:
+      - lurnkode-network
+
+  redis-assessment:
+    image: redis:7-alpine
+    container_name: lurnkode-redis-assessment
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_assessment_data:/data
+    networks:
+      - lurnkode-network
+
+volumes:
+  postgres_assessment_data:
+  redis_assessment_data:
+
+networks:
+  lurnkode-network:
+    driver: bridge
+

@@ -1,0 +1,29 @@
+{
+  "name": "assessment-service",
+  "version": "1.0.0",
+  "description": "LurnKode Assessment Microservice (M3) - Quiz and automated code grading engine",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch src/index.ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "typecheck": "bun check",
+    "seed": "bun run scripts/seed-assessment.ts",
+    "fake-judge": "bun run scripts/fake-judge.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "vitest": "^5.0.3"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  },
+  "dependencies": {
+    "elysia": "^1.2.25",
+    "drizzle-orm": "^0.38.4",
+    "zod": "^4.6.5"
+  }
+}
