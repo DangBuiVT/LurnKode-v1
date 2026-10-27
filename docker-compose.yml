@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  # 1. Cơ sở dữ liệu chính (PostgreSQL có pgvector cho RAG AI)
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: lurnkode-postgres
+    environment:
+      POSTGRES_USER: lurnkode_user
+      POSTGRES_PASSWORD: lurnkode_password
+      POSTGRES_DB: lurnkode_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - lurnkode-network
+
+  # 2. Redis phục vụ Hàng đợi chấm code Sandbox (BullMQ)[cite: 1]
+  redis:
+    image: redis:7-alpine
+    container_name: lurnkode-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - lurnkode-network
+
+  # 3. Phân hệ Backend API Gateway (M1, M2, M3)
+  api:
+    container_name: lurnkode-backend-m1
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://lurnkode_user:lurnkode_password@postgres:5432/lurnkode_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - lurnkode-network
+
+  # 4. Phân hệ Frontend Web UI (M5)
+  ui:
+    container_name: lurnkode-ui
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - api
+    networks:
+      - lurnkode-network
+
+networks:
+  lurnkode-network:
+    name: lurnkode-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
