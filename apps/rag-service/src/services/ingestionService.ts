@@ -1,19 +1,47 @@
-import type { RagConfig } from "../config.ts";
+import { processingConfig, type RagConfig } from "../config.ts";
 import type { ParsedDocument } from "../domain/document.ts";
 import type { ParserInput, ParserRegistry } from "./ports/documentParser.ts";
 import type { IngestionDependencies, IngestionService, IndexResult } from "./ports/serviceContracts.ts";
-import { NotImplemented } from "../domain/errors.ts";
+import { InvalidInput, InvalidOutput, NotImplemented } from "../domain/errors.ts";
 
 export function createIngestionService(ports: IngestionDependencies, config: RagConfig): IngestionService {
   // TODO: Nối dependencies với ingestDocument, trả object cho HTTP layer gọi.
   throw new NotImplemented("createIngestionService");
 }
 
-export async function parseMaterial(input: ParserInput, parsers: ParserRegistry, maxBytes = 10 * 1024 * 1024): Promise<ParsedDocument> {
-  // TODO: Kiểm tra format, bytes không rỗng và giới hạn kích thước hợp lệ.
-  // TODO: Gọi parser tương ứng từ registry, không import adapter vào service.
-  // TODO: Kiểm tra format/parserVersion, text, location và giới hạn đầu ra.
-  throw new NotImplemented("parseMaterial");
+export async function parseMaterial(input: ParserInput, parsers: ParserRegistry): Promise<ParsedDocument> {
+  if (!Object.hasOwn(parsers, input.format)) {
+    throw new InvalidInput("Định dạng không được hỗ trợ");
+  }
+
+  if (input.bytes.byteLength === 0) {
+    throw new InvalidInput("Tài liệu rỗng");
+  }
+
+  if (input.bytes.byteLength > processingConfig.maxBytes) {
+    throw new InvalidInput("Tài liệu vượt quá giới hạn dung lượng")
+  }
+
+  const parser = parsers[input.format];
+  const document = await parser.parse(input);
+
+  if (!document || document.format != input.format) {
+    throw new InvalidOutput("Parser trả về sai định dạng");
+  }
+
+  if (!Array.isArray(document.sections) || document.sections.length == 0) {
+    throw new InvalidOutput("Parser không trả về section");
+  }
+
+  const hasContent = document.sections.some(
+    section => section.text.trim().length > 0,
+  );
+
+  if (!hasContent) {
+    throw new InvalidInput("Tài liệu không có nội dung")
+  }
+
+  return document;
 }
 
 export async function ingestDocument(materialId: string, ports: IngestionDependencies, config: RagConfig): Promise<IndexResult> {

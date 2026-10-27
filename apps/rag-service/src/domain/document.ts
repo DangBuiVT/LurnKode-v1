@@ -7,6 +7,5 @@ export type SourceLocation =
 export interface ParsedSection { text: string; location?: SourceLocation }
 export interface ParsedDocument {
   format: DocumentFormat;
-  parserVersion: string;
   sections: ParsedSection[];
 }

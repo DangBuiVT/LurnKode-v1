@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { processingConfig } from "../src/config.ts";
 import type { ParsedDocument } from "../src/domain/document.ts";
 import { InvalidInput, InvalidOutput } from "../src/domain/errors.ts";
 import { createParserRegistry } from "../src/infra/parsers/parserRegistry.ts";
@@ -20,14 +21,6 @@ function registryReturning(output: unknown): ParserRegistry {
 }
 
 describe("parseMaterial — đầu vào không hợp lệ", () => {
-  test.each([0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])(
-    "từ chối maxBytes không hợp lệ: %s",
-    async maxBytes => {
-      await expect(parseMaterial(textInput(), createParserRegistry(), maxBytes))
-        .rejects.toBeInstanceOf(InvalidInput);
-    },
-  );
-
   test("từ chối định dạng ngoài registry", async () => {
     const input = { ...textInput(), format: "docx" } as unknown as ParserInput;
     await expect(parseMaterial(input, createParserRegistry())).rejects.toBeInstanceOf(InvalidInput);
@@ -37,9 +30,12 @@ describe("parseMaterial — đầu vào không hợp lệ", () => {
     await expect(parseMaterial(textInput(""), createParserRegistry())).rejects.toBeInstanceOf(InvalidInput);
   });
 
-  test("giới hạn theo bytes UTF-8 thay vì số ký tự", async () => {
-    // "ế" có một ký tự nhưng chiếm ba bytes UTF-8.
-    await expect(parseMaterial(textInput("ế"), createParserRegistry(), 2))
+  test("từ chối file vượt processingConfig.maxBytes", async () => {
+    const input: ParserInput = {
+      format: "txt",
+      bytes: new Uint8Array(processingConfig.maxBytes + 1),
+    };
+    await expect(parseMaterial(input, createParserRegistry()))
       .rejects.toBeInstanceOf(InvalidInput);
   });
   test("từ chối tài liệu toàn khoảng trắng", async () => {

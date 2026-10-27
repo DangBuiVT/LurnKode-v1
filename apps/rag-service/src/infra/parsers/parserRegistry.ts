@@ -1,9 +1,16 @@
 import type { ParserRegistry } from "../../services/ports/documentParser.ts";
-import { NotImplemented } from "../../domain/errors.ts";
+import { TextParser } from "./textParser.ts";
+import { PdfParser } from "./pdfParser.ts";
+import { PptxParser } from "./pptxParser.ts";
+import { VideoParser } from "./videoParser.ts";
 
 export function createParserRegistry(): ParserRegistry {
-  // TODO: Import adapters và nối txt/md -> textParser, pdf -> pdfParser,
-  // pptx -> pptxParser, video -> videoParser. PDF slides dùng pdfParser.
-  // TODO: Truyền registry cho parseMaterial từ composition root, không import infra vào services.
-  throw new NotImplemented("createParserRegistry");
+  const textParser = new TextParser();
+  return {
+    txt: textParser,
+    md: textParser,
+    pdf: new PdfParser(),
+    pptx: new PptxParser(),
+    video: new VideoParser(),
+  };
 }

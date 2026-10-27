@@ -1,7 +1,7 @@
 import type { Rating, StoredConversation, StoredMessage, TutorReply } from "../../domain/conversation.ts";
 import type { CitationSource } from "../../domain/citation.ts";
 import type { ParserRegistry } from "./documentParser.ts";
-import type { DocumentChunker } from "./documentChunker.ts";
+import type { DocumentChunker } from "./chunker.ts";
 import type { MaterialClient, CourseAccessClient } from "./lmsClient.ts";
 import type { EmbeddingProvider } from "./embeddingProvider.ts";
 import type { LLMProvider } from "./llmProvider.ts";

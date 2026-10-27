@@ -1,11 +1,19 @@
 import { NotImplemented } from "./domain/errors.ts";
 
+export const processingConfig = {
+  maxBytes: 10 * 1024 * 1024,
+  chunk: {
+    limitWords: 300,
+    overlapWords: 50,
+  },
+};
+
+export type ProcessingConfig = typeof processingConfig;
+
 export interface RagConfig {
   topK: number;
-  // 0..1 cosine similarity cutoff; experimental DEV only until calibrated on labeled questions.
   minScore: number;
-  chunkWords: number;
-  overlapWords: number;
+  processing: ProcessingConfig;
   embeddingDim: number;
   embeddingModel: string;
 }

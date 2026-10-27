@@ -1,6 +1,13 @@
 import type { SourceLocation } from "./document.ts";
 
-export interface TextChunk { location?: SourceLocation; text: string; ordinal: number; headingPath: string }
+export interface TextChunk {
+  text: string;
+  ordinal: number; 
+  headingPath: string;
+  startOffset: number;
+  endOffset: number;
+  location?: SourceLocation; 
+}
 export interface IndexedChunk extends TextChunk {
   id: string;
   materialId: string;
