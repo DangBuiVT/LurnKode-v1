@@ -186,7 +186,7 @@ export function chunkMarkdown(markdown: string, options: ChunkOptions = processi
       startOffset: currentStart,
       endOffset: currentEnd,
       headingPath: currentHeadingPath,
-      sectionId: curr    // Cắt từ nguồn để giữ đúng dòng trắng và offset giữa các paragraph.entSectionId,
+      sectionId: currentSectionId    // Cắt từ nguồn để giữ đúng dòng trắng và offset giữa các paragraph.entSectionId,
     });
   }
 
