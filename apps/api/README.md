@@ -38,21 +38,23 @@ Base path: `/api/v1`. Danh sách dưới đây là hợp đồng dự kiến, ch
 
 | Method | Endpoint | Mục đích |
 |---|---|---|
-| `GET` | `/health` | Kiểm tra trạng thái service; không yêu cầu đăng nhập |
+| `GET` | `/health` | Health check ngoại lệ, không thuộc `/api/v1`, không yêu cầu đăng nhập |
+| `POST` | `/api/v1/auth/register` | Đăng ký public, chỉ tạo tài khoản role `Learner` nếu nhóm chọn tự đăng ký |
 | `POST` | `/api/v1/auth/login` | Xác thực thông tin đăng nhập và cấp token |
-| `POST` | `/api/v1/auth/logout` | Đăng xuất/thu hồi phiên nếu cơ chế token hỗ trợ |
-| `GET` | `/api/v1/auth/me` | Lấy user ID, role và thông tin danh tính của token hiện tại |
-| `POST` | `/api/v1/auth/refresh` | Cấp access token mới nếu chọn dùng refresh token |
+| `POST` | `/api/v1/auth/logout` | Thu hồi refresh session hiện tại; access JWT còn hiệu lực đến khi hết hạn |
+| `GET` | `/api/v1/auth/me` | Lấy identity đã xác thực: `userId`, role và claim cần cho caller |
+| `POST` | `/api/v1/auth/refresh` | Xoay refresh token và cấp access token mới |
 | `PATCH` | `/api/v1/auth/password` | Đổi mật khẩu sau khi xác minh mật khẩu hiện tại |
-| `GET` | `/api/v1/users/me` | Xem hồ sơ của chính mình |
+| `GET` | `/api/v1/users/me` | Lấy hồ sơ cá nhân: tên, email, avatar và trường được phép công khai |
 | `PATCH` | `/api/v1/users/me` | Cập nhật các trường hồ sơ được phép |
 | `GET` | `/api/v1/users` | Tìm/list tài khoản theo quyền quản trị |
-| `POST` | `/api/v1/users` | Tạo tài khoản theo chính sách quản trị |
+| `POST` | `/api/v1/users` | Admin tạo tài khoản nếu không bật đăng ký public |
 | `GET` | `/api/v1/users/:id` | Xem tài khoản theo quyền |
-| `PATCH` | `/api/v1/users/:id` | Cập nhật thông tin/role theo quyền quản trị |
+| `PATCH` | `/api/v1/users/:id` | Cập nhật các trường hồ sơ được phép; không đổi role/status |
+| `PATCH` | `/api/v1/users/:id/role` | Admin đổi global role |
 | `PATCH` | `/api/v1/users/:id/status` | Khóa hoặc mở tài khoản theo quyền quản trị |
 
-Trước implementation cần chốt: access token format/claims, thời hạn token, refresh-token strategy, cách thu hồi token, cách khởi tạo tài khoản và chính sách phân quyền quản trị.
+Quyết định đề xuất cho MVP: access JWT RS256 TTL 15 phút; refresh token ngẫu nhiên TTL 7 ngày, chỉ lưu hash, rotation mỗi lần refresh và phát hiện reuse để thu hồi token family. Logout thu hồi refresh session; access JWT không bị vô hiệu hóa ngay nếu chưa có denylist. Khi khóa tài khoản hoặc đổi mật khẩu, thu hồi các refresh session đang hoạt động. Cần nhóm xác nhận chính sách đăng ký Learner và phương thức lưu refresh token cho frontend trước khi chốt OpenAPI.
 
 ## Quy ước API
 
@@ -71,6 +73,23 @@ Response thành công đề xuất:
 }
 ```
 
+Response danh sách đề xuất (giữ cùng success envelope):
+
+```json
+{
+  "success": true,
+  "data": [],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "totalItems": 0,
+    "totalPages": 0
+  }
+}
+```
+
+Endpoint trả `204 No Content` không gửi response body. Mọi lỗi (`401`, `403`, `404`, `409`, `422`...) cần `error.code` ổn định.
+
 Response lỗi đề xuất:
 
 ```json
@@ -83,6 +102,26 @@ Response lỗi đề xuất:
   }
 }
 ```
+
+## JWT và xác thực liên service
+
+Access token dùng JWT ký RS256, TTL đề xuất 15 phút. M1 công bố public key qua JWKS; private key chỉ tồn tại trong môi trường M1. Service tiêu thụ phải xác minh chữ ký, `iss`, `aud`, `exp` và các claim bắt buộc trước khi tin identity.
+
+| Claim | Quy tắc |
+|---|---|
+| `sub` | UUID của user |
+| `role` | `Admin`, `Instructor` hoặc `Learner` |
+| `iss` | Issuer cố định của M1 |
+| `aud` | Audience được các service thống nhất |
+| `iat` | Thời điểm phát hành |
+| `exp` | Thời điểm hết hạn |
+| `jti` | ID duy nhất của token; khuyến nghị dùng để truy vết/denylist nếu cần |
+
+Role thay đổi không sửa được JWT đã phát hành; trong MVP token cũ có thể giữ role cũ tối đa 15 phút. Khi khóa tài khoản/đổi mật khẩu, thu hồi refresh session; access token đã phát hành vẫn sống đến `exp` nếu chưa có denylist hoặc cơ chế tương đương.
+
+Refresh token đề xuất là chuỗi ngẫu nhiên đủ mạnh, TTL 7 ngày, chỉ lưu hash trong DB và rotation mỗi lần sử dụng. Nếu token đã rotate bị dùng lại, thu hồi toàn bộ session/token family tương ứng. Logout thu hồi refresh session hiện tại; không tuyên bố access JWT bị revoke tức thì.
+
+Frontend cần chốt cách lưu refresh token. Với web, ưu tiên cookie `HttpOnly`, `Secure`, `SameSite` phù hợp và phải có biện pháp CSRF; nếu dùng Authorization header, tránh lưu token dài hạn ở nơi JavaScript có thể đọc.
 
 ## Kiến trúc và cấu trúc thư mục
 
@@ -128,15 +167,17 @@ Dependency, script chạy và biến môi trường cụ thể sẽ được kha
 - Validate dữ liệu đầu vào bằng schema và chỉ cho phép cập nhật trường được hỗ trợ.
 - Dùng HTTPS ở môi trường triển khai và cấu hình CORS theo allowlist.
 - Giới hạn/rate-limit endpoint đăng nhập; tránh tiết lộ tài khoản có tồn tại qua thông báo lỗi.
-- Token cần có thời hạn và chiến lược refresh/thu hồi được tài liệu hóa.
+- Access JWT ký RS256, TTL đề xuất 15 phút; service tiêu thụ phải kiểm tra chữ ký, `iss`, `aud`, `exp` và claim cần thiết.
+- Refresh token TTL đề xuất 7 ngày, chỉ lưu hash, rotate khi refresh; logout thu hồi refresh session chứ không giả định access JWT bị revoke ngay.
+- Cấu hình JWKS/key rotation; giới hạn quyền truy cập private signing key.
 - Mọi service phải xác minh token đáng tin cậy; không tin user ID/role do client tự gửi trong body/header tùy ý.
 - Trả lỗi an toàn cho client, không để lộ stack trace hoặc thông tin nội bộ.
 
 ## Kế hoạch triển khai
 
-1. Chốt token, refresh/revocation, cách tạo tài khoản và role.
+1. Xác nhận đăng ký Learner public hay chỉ Admin tạo tài khoản; chốt refresh-token transport/cookie và CSRF policy. Token đề xuất và claim contract đã ghi ở trên.
 2. Khởi tạo Bun/Elysia app, cấu hình môi trường, logging, lỗi chuẩn và `/health`.
-3. Thiết kế schema M1 cho users, credentials, roles và session/token nếu cần.
+3. Thiết kế schema M1 cho users, credentials, roles và refresh sessions (lưu hash, rotation/reuse state).
 4. Xây dựng auth middleware, login, `/auth/me`, logout/refresh theo quyết định đã chốt.
 5. Xây dựng hồ sơ và quản trị users/roles.
 6. Viết API contract và kiểm tra các luồng thành công, lỗi xác thực, lỗi phân quyền.
@@ -157,3 +198,10 @@ Dependency, script chạy và biến môi trường cụ thể sẽ được kha
 - [Hướng dẫn bắt đầu repo](../../docs/guides/getting-started.md)
 - [Cấu hình môi trường](../../docs/guides/environment-setup.md)
 - [Tổng quan LurnKode](../../README.md)
+
+
+
+## Setup môi trường
+
+Xem hướng dẫn [thiết lập môi trường M1](../../docs/api/m1/environment-setup.md). Skeleton hiện chưa có manifest, config loader hoặc migration nên các bước chạy API sẽ hoạt động sau khi bootstrap hoàn tất.
+

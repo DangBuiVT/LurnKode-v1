@@ -1,0 +1,10 @@
+# Ignore local planning notes
+/TODO.md
+
+# Local environment and signing keys
+.env
+.env.*
+!.env.example
+apps/api/keys/
+*.pem
+
