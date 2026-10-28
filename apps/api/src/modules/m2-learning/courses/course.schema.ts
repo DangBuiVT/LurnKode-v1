@@ -5,18 +5,6 @@ export const IdParamSchema = t.Object({
   id: t.String({ format: 'uuid' }),
 });
 
-export const CourseIdParamSchema = t.Object({
-  courseId: t.String({ format: 'uuid' }),
-});
-
-export const ChapterIdParamSchema = t.Object({
-  chapterId: t.String({ format: 'uuid' }),
-});
-
-export const LessonIdParamSchema = t.Object({
-  lessonId: t.String({ format: 'uuid' }),
-});
-
 // 1. Course Schemas
 export const CreateCourseBodySchema = t.Object({
   title: t.String({ minLength: 1, maxLength: 255 }),

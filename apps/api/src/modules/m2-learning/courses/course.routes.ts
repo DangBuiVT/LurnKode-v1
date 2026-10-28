@@ -4,9 +4,6 @@ import { ok, paginated } from '../../../utils/response';
 import { CourseService } from './course.service';
 import {
   IdParamSchema,
-  CourseIdParamSchema,
-  ChapterIdParamSchema,
-  LessonIdParamSchema,
   CreateCourseBodySchema,
   ListCoursesQuerySchema,
   UpdateCourseBodySchema,
@@ -80,16 +77,16 @@ export const courseRoutes = new Elysia({ prefix: '/api/v1' })
     { params: IdParamSchema }
   )
 
-  // 6.  POST   /courses/:courseId/chapters
+  // 6.  POST   /courses/:id/chapters
   .post(
-    '/courses/:courseId/chapters',
+    '/courses/:id/chapters',
     async({params, user, body, set}) => {
       const authUser = requireRoles(user, ['Instructor', 'Admin']);
-      const chapter = await CourseService.createChapter(params.courseId, authUser, body);
+      const chapter = await CourseService.createChapter(params.id, authUser, body);
       set.status = 201;
       return ok(chapter);
     },
-    {params: CourseIdParamSchema, body: CreateChapterBodySchema}
+    {params: IdParamSchema, body: CreateChapterBodySchema}
   )
 
   // 7.  PATCH  /chapters/:id
@@ -114,16 +111,16 @@ export const courseRoutes = new Elysia({ prefix: '/api/v1' })
     {params: IdParamSchema}
   )
 
-  // 9.  POST   /chapters/:chapterId/lessons
+  // 9.  POST   /chapters/:id/lessons
   .post(
-    '/chapters/:chapterId/lessons',
+    '/chapters/:id/lessons',
     async({params, user, body, set}) => {
       const authUser = requireRoles(user, ['Instructor', 'Admin']);
-      const lesson = await CourseService.createLesson(params.chapterId, authUser, body);
+      const lesson = await CourseService.createLesson(params.id, authUser, body);
       set.status = 201;
       return ok(lesson);
     },
-    {params: ChapterIdParamSchema, body: CreateLessonBodySchema}
+    {params: IdParamSchema, body: CreateLessonBodySchema}
   )
 
   // 10. PATCH  /lessons/:id
@@ -148,16 +145,16 @@ export const courseRoutes = new Elysia({ prefix: '/api/v1' })
     {params: IdParamSchema}
   )
 
-  // 12. POST   /lessons/:lessonId/materials
+  // 12. POST   /lessons/:id/materials
   .post(
-    '/lessons/:lessonId/materials',
+    '/lessons/:id/materials',
     async({params, user, body, set}) => {
       const authUser = requireRoles(user, ['Instructor', 'Admin']);
-      const material = await CourseService.createMaterial(params.lessonId, authUser, body);
+      const material = await CourseService.createMaterial(params.id, authUser, body);
       set.status = 201;
       return ok(material);
     },
-    {params: LessonIdParamSchema, body: CreateMaterialBodySchema}
+    {params: IdParamSchema, body: CreateMaterialBodySchema}
   )
 
   // 13. PATCH  /materials/:id

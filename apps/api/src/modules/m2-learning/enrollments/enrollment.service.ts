@@ -3,10 +3,13 @@ import { users, learners, courses, chapters, lessons, materials, enrollments } f
 import { eq, and, asc } from 'drizzle-orm';
 import { Errors } from '../../../utils/errors';
 import type { AuthUser } from '../../../middlewares/auth.middleware';
+import { CourseService } from '../courses/course.service';
 
 export const EnrollmentService = {
   async ensureLearnerExists(learnerId: string) {
     // TODO: Insert learnerId vào bảng users và learners với .onConflictDoNothing()
+    await db.insert(users).values({id: learnerId}).onConflictDoNothing();
+    await db.insert(learners).values({id: learnerId}).onConflictDoNothing();
   },
 
   /**
@@ -18,8 +21,40 @@ export const EnrollmentService = {
     // 1. Join bảng lessons với bảng chapters theo chapters.courseId = courseId
     // 2. Sắp xếp theo asc(chapters.orderIndex), asc(lessons.orderIndex)
     // 3. Trả về mảng các bài học kèm số thứ tự toàn cục (1, 2, 3, ...)
+    const rows = await db.select().from(lessons).innerJoin(chapters, eq(lessons.chapterId, chapters.id))
+      .where(eq(chapters.courseId, courseId))
+      .orderBy(asc(chapters.orderIndex), asc(lessons.orderIndex));
+    return rows.map((row, i) => ({...row, rank: i+ 1}));
   },
 
+
+  /**
+   * Helper bổ sung cho 2 hàm cuối
+   */
+  async verifyLessonAccess(lessonId: string, user: AuthUser) {
+    const lesson = await db.query.lessons.findFirst({
+      where: eq(lessons.id, lessonId),
+      with: {chapter: true},
+    });
+    if (!lesson) throw Errors.NotFound('Lesson');
+
+    const courseId = lesson.chapter.courseId;
+    const [enrollment] = await db.select().from(enrollments)
+      .where(and(eq(enrollments.learnerId, user.id), eq(enrollments.courseId, courseId)));
+    if (!enrollment) throw Errors.Forbidden('NOT_ENROLLED','Learner is not enrolled in this course.');
+
+    const ordered = await this.getOrderedCourseLessons(courseId);
+    const requestedRank = (ordered.find((p) => p.lessons.id === lessonId))?.rank ?? 0;
+    const unlockedRank = (ordered.find((p) => p.lessons.id === enrollment.lastAccessedLessonId))?.rank ?? 0;
+    if (requestedRank > unlockedRank + 1){
+      throw Errors.Forbidden(         
+        'SEQUENTIAL_PREREQUISITE_FAILED',
+        `Access denied. You must complete prerequisite lesson #${unlockedRank + 1} before accessing this lesson.`,
+        {requestedOrderIndex: requestedRank, unlockedOrderIndex: unlockedRank + 1}
+      );
+    }
+    return {enrollment, requestedRank, unlockedRank};
+  },
   // 1. POST /api/v1/courses/:id/enroll
   async enrollCourse(courseId: string, user: AuthUser) {
     // TODO:
@@ -28,12 +63,36 @@ export const EnrollmentService = {
     // 3. Kiểm tra xem learner đã enroll khóa này chưa. Nếu đã enroll -> throw Errors.Conflict('ALREADY_ENROLLED', 'Learner is already enrolled in this course.')
     // 4. Gọi await this.ensureLearnerExists(user.id)
     // 5. Insert vào bảng enrollments (lastAccessedLessonId = null) và return (HTTP 201)
+    const [course] = await db.select().from(courses).where(and(eq(courses.id, courseId), eq(courses.status, 'published')));
+    if (!course) throw Errors.NotFound('Published course');
+    if (course.instructorId === user.id) throw Errors.Forbidden('SELF_ENROLLMENT_FORBIDDEN', 'Instructors cannot enroll in their own course.');
+    const existing = await db.query.enrollments.findFirst({
+      where: and(eq(enrollments.learnerId, user.id), eq(enrollments.courseId, courseId)),
+    });
+    if (existing) throw Errors.Conflict('ALREADY_ENROLLED', 'Learner is already enrolled in this course.');
+    await this.ensureLearnerExists(user.id);
+
+    try {
+      const [enrollment] = await db.insert(enrollments)
+      .values({learnerId: user.id, courseId: courseId, lastAccessedLessonId: null}).returning();
+      return enrollment;
+    } catch (err: any) {
+      const code = err.code ?? err.cause?.code;
+      if (code === '23505') {
+        throw Errors.Conflict('ALREADY_ENROLLED', 'Learner is already enrolled in this course.');
+      }
+      throw err;
+    }
   },
 
   // 2. GET /api/v1/my/enrollments
   async getMyEnrollments(learnerId: string) {
     // TODO:
     // Truy vấn danh sách enrollments của learnerId kèm thông tin course và lastAccessedLesson
+    return db.query.enrollments.findMany({
+      where: eq(enrollments.learnerId, learnerId),
+      with: { course: true, lastAccessedLesson: true },
+    });
   },
 
   // 3. GET /api/v1/lessons/:id/access (Constraint 4: Sequential Access Verification)
@@ -50,6 +109,20 @@ export const EnrollmentService = {
     //         { requestedOrderIndex: requestedRank, unlockedOrderIndex: unlockedRank + 1 }
     //       )
     // 6. Nếu hợp lệ: Truy vấn toàn bộ materials của lessonId và trả về
+
+    //Bổ sung admin (full pass) và instructor (owned only)
+    const lesson = await db.query.lessons.findFirst({
+      where: eq(lessons.id, lessonId),
+      with: {chapter: true},
+    });
+    if (!lesson) throw Errors.NotFound('Lesson');
+
+    if (user.role === 'Admin' || user.role === 'Instructor') {
+      await CourseService.verifyCourseOwnership(lesson.chapter.courseId, user);
+    } else {
+      await this.verifyLessonAccess(lessonId, user); //Hoàn thành 1 - 5
+    }
+    return await db.select().from(materials).where(eq(materials.lessonId, lessonId));
   },
 
   // 4. POST /api/v1/lessons/:id/complete (Constraint 5: Monotonic Progress Update)
@@ -61,5 +134,15 @@ export const EnrollmentService = {
     //    - Chỉ cập nhật enrollment.lastAccessedLessonId = lessonId NẾU completedRank > currentRank.
     //    - Nếu completedRank <= currentRank (học viên ôn lại bài cũ): giữ nguyên lastAccessedLessonId.
     // 3. Return bản ghi enrollment sau khi cập nhật
+    const {enrollment, requestedRank, unlockedRank} = await this.verifyLessonAccess(lessonId, user);
+    if (requestedRank > unlockedRank) {
+      const [updated] = await db
+        .update(enrollments)
+        .set({ lastAccessedLessonId: lessonId })
+        .where(eq(enrollments.id, enrollment.id))
+        .returning();
+      return updated;
+    }
+    return enrollment;
   },
 };
