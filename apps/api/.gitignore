@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Local environment files — KHÔNG commit, chỉ giữ template
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+keys/
+
+# Build and test output
+dist/
+coverage/
+
+# Logs and temporary files
+*.log
+npm-debug.log*
+*.tsbuildinfo
+
+# Local editor and operating system files
+.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db

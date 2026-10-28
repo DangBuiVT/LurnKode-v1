@@ -1,4 +1,35 @@
-// TODO: users table schema: UUID PK, normalized unique email/login identifier, profile fields, global role, status, timestamps.
-// TODO: password hash có thể nằm trong credential field/table do M1 sở hữu; không expose qua response schema.
-// TODO: xác định role lưu enum/lookup; giữ role values thống nhất với JWT và M2 contract.
-// TODO: đặt indexes/constraints cho login lookup, unique identifier, role/status; không đưa entities M2 vào schema.
+import {
+  index,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from "drizzle-orm/pg-core";
+
+export const userRole = pgEnum("user_role", ["Admin", "Instructor", "Learner"]);
+export const userStatus = pgEnum("user_status", ["active", "locked"]);
+
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    email: varchar("email", { length: 320 }).notNull(),
+    passwordHash: text("password_hash").notNull(),
+    fullName: varchar("full_name", { length: 150 }).notNull(),
+    avatarUrl: text("avatar_url"),
+    role: userRole("role").default("Learner").notNull(),
+    status: userStatus("status").default("active").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("users_email_unique").on(table.email),
+    index("users_role_status_idx").on(table.role, table.status),
+  ],
+);
+
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;

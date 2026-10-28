@@ -1,5 +1,35 @@
-// TODO: UserRole: union/enum `Admin` | `Instructor` | `Learner`, thống nhất casing với JWT/M2.
-// TODO: AuthPrincipal: userId UUID, role, issuer/audience và claims đã verify cần thiết.
-// TODO: AccessTokenClaims: sub, role, iss, aud, iat, exp, jti; không coi type assertion là bước verify.
-// TODO: PublicUser: profile fields được phép trả; tuyệt đối không gồm password hash/session/token.
-// TODO: RefreshSessionRecord: internal DB record chứa hash/state, không chứa raw token.
+export enum UserRole {
+  Admin = "Admin",
+  Instructor = "Instructor",
+  Learner = "Learner",
+}
+
+/** Identity and authorization data from a verified access token. */
+export interface AuthPrincipal {
+  userId: string;
+  role: UserRole;
+  issuer: string;
+  audience: string | string[];
+  tokenId: string;
+}
+
+/** Untrusted until validated by the configured JWT verifier. */
+export interface AccessTokenClaims {
+  sub: string;
+  role: UserRole;
+  iss: string;
+  aud: string | string[];
+  iat: number;
+  exp: number;
+  jti: string;
+}
+
+/** User fields safe to expose through public API responses. */
+export interface PublicUser {
+  id: string;
+  email: string;
+  fullName: string;
+  avatarUrl: string | null;
+  role: UserRole;
+  createdAt: Date;
+}
