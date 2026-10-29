@@ -90,3 +90,66 @@ export interface CourseWithHierarchy extends Course {
   enrollment?: Enrollment | null;
   overall_progress: number; // 0 - 100 percentage
 }
+
+// ==========================================
+// Quiz & Assessment Schema (Section 4.4 / 5.4)
+// ==========================================
+
+export type QuestionType = "single_choice" | "multiple_choice";
+
+export interface QuizOption {
+  id: string;
+  text: string;
+  is_correct: boolean;
+}
+
+export interface QuizQuestion {
+  id: string;
+  quiz_id?: string;
+  prompt: string;
+  type: QuestionType;
+  points: number;
+  options: QuizOption[];
+  explanation?: string;
+}
+
+export interface Quiz {
+  id: string;
+  course_id: string;
+  lesson_id?: string;
+  title: string;
+  description: string;
+  time_limit_minutes: number; // 0 = unlimited
+  passing_score_percentage: number; // e.g. 70%
+  max_attempts: number; // 0 = unlimited
+  questions: QuizQuestion[];
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface QuizQuestionFeedback {
+  question_id: string;
+  is_correct: boolean;
+  user_answers: string[]; // option ids
+  correct_answers: string[]; // option ids
+  points_earned: number;
+  max_points: number;
+  explanation?: string;
+}
+
+export interface QuizAttempt {
+  id: string;
+  quiz_id: string;
+  learner_id: string;
+  learner_name?: string;
+  learner_email?: string;
+  answers: Record<string, string[]>; // questionId -> selected optionId(s)
+  score: number;
+  max_score: number;
+  percentage: number;
+  passed: boolean;
+  time_spent_seconds?: number;
+  submitted_at: string;
+  feedback: QuizQuestionFeedback[];
+}
+

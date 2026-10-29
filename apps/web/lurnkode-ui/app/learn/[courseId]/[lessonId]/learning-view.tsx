@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { LessonContentCard } from "@/components/learn/lesson-content-card";
 import { LessonSubmissionCard } from "@/components/learn/lesson-submission-card";
+import { LessonQuizCard } from "@/components/learn/lesson-quiz-card";
 import { LessonSwitcher } from "@/components/learn/lesson-switcher";
 import { mockDb } from "@/lib/db/mock-db";
 import { CURRENT_USER } from "@/lib/db/mock-data";
 import { Course, Lesson, User, Material } from "@/lib/db/schema";
+import { Award, FileEdit } from "lucide-react";
 
 interface LearningViewProps {
   course: Course;
@@ -26,6 +28,7 @@ export function LearningView({
   initialIsCompleted,
 }: LearningViewProps) {
   const [isCompleted, setIsCompleted] = useState(initialIsCompleted);
+  const [assessmentTab, setAssessmentTab] = useState<"quiz" | "manual">("quiz");
 
   // Auto-record last accessed lesson for Approach 1 (Smart Auto-Resume)
   useEffect(() => {
@@ -71,8 +74,51 @@ export function LearningView({
           markdownContent={materialContent}
         />
 
-        {/* Right Column: Assignment Submission */}
-        <LessonSubmissionCard lessonTitle={lesson.title} />
+        {/* Right Column: Assessment Workspace (Quiz vs Manual Submission) */}
+        <div className="space-y-4">
+          {/* Assessment Mode Switcher Tabs */}
+          <div className="flex items-center gap-1 p-1 rounded-xl border bg-muted/40 text-xs font-semibold">
+            <button
+              onClick={() => setAssessmentTab("quiz")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg transition-all ${
+                assessmentTab === "quiz"
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Award className="h-4 w-4 text-primary" />
+              <span>Trắc nghiệm chấm tự động</span>
+            </button>
+
+            <button
+              onClick={() => setAssessmentTab("manual")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg transition-all ${
+                assessmentTab === "manual"
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <FileEdit className="h-4 w-4 text-primary" />
+              <span>Bài tập nộp tệp / text</span>
+            </button>
+          </div>
+
+          {/* Active Assessment Panel */}
+          {assessmentTab === "quiz" ? (
+            <LessonQuizCard
+              courseId={course.id}
+              lessonId={lesson.id}
+              lessonTitle={lesson.title}
+              onQuizCompleted={(passed) => {
+                if (passed) {
+                  setIsCompleted(true);
+                }
+              }}
+            />
+          ) : (
+            <LessonSubmissionCard lessonTitle={lesson.title} />
+          )}
+        </div>
       </div>
     </div>
   );

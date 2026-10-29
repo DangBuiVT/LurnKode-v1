@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { StudioCourse } from "@/types/studio";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { FileQuestion } from "lucide-react";
+import { cn } from "cn";
 
 interface StudioCourseCardProps {
   course: StudioCourse;
@@ -100,8 +103,19 @@ export function StudioCourseCard({
           </span>
         </div>
 
-        {/* Action Buttons Row: Edit & Submissions */}
+        {/* Action Buttons Row: Edit, Quizzes & Submissions */}
         <div className="mt-3.5 flex items-center gap-2">
+          <Link
+            href={`/studio/courses/${course.id}/quizzes`}
+            className={cn(
+              buttonVariants({ variant: "default", size: "sm" }),
+              "flex-1 rounded-lg text-xs font-semibold gap-1.5"
+            )}
+          >
+            <FileQuestion className="h-3.5 w-3.5" />
+            <span>Quizzes</span>
+          </Link>
+
           <Button
             type="button"
             variant="outline"

@@ -41,7 +41,9 @@ export default function CourseCatalogPage() {
   }, [courses]);
 
   const categories = useMemo(() => {
-    const set = new Set(courses.map((c) => c.category).filter(Boolean) as string[]);
+    const set = new Set(
+      courses.map((c) => c.category).filter(Boolean) as string[],
+    );
     return Array.from(set).sort();
   }, [courses]);
 
@@ -56,7 +58,7 @@ export default function CourseCatalogPage() {
           c.title.toLowerCase().includes(query) ||
           c.description.toLowerCase().includes(query) ||
           c.instructor.toLowerCase().includes(query) ||
-          (c.category && c.category.toLowerCase().includes(query))
+          (c.category && c.category.toLowerCase().includes(query)),
       );
     }
 
@@ -75,9 +77,13 @@ export default function CourseCatalogPage() {
   const statusCounts = useMemo(() => {
     return {
       all: baseFilteredCourses.length,
-      in_progress: baseFilteredCourses.filter((c) => c.status === "in_progress").length,
-      completed: baseFilteredCourses.filter((c) => c.status === "completed").length,
-      not_enrolled: baseFilteredCourses.filter((c) => c.status === "not_enrolled").length,
+      in_progress: baseFilteredCourses.filter((c) => c.status === "in_progress")
+        .length,
+      completed: baseFilteredCourses.filter((c) => c.status === "completed")
+        .length,
+      not_enrolled: baseFilteredCourses.filter(
+        (c) => c.status === "not_enrolled",
+      ).length,
     };
   }, [baseFilteredCourses]);
 
@@ -100,7 +106,9 @@ export default function CourseCatalogPage() {
         return (b.progress || 0) - (a.progress || 0);
       }
       if (a.createdAt && b.createdAt) {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
       }
       return 0;
     });
@@ -172,8 +180,8 @@ export default function CourseCatalogPage() {
       prev.map((c) =>
         c.id === courseId
           ? { ...c, status: "in_progress" as const, progress: 0 }
-          : c
-      )
+          : c,
+      ),
     );
   };
 
@@ -192,7 +200,8 @@ export default function CourseCatalogPage() {
           Course Catalog
         </h1>
         <p className="text-sm text-muted-foreground">
-          Explore courses, track your learning journey, and filter by status or topic.
+          Explore courses, track your learning journey, and filter by status or
+          topic.
         </p>
       </div>
 
@@ -382,7 +391,9 @@ export default function CourseCatalogPage() {
         {/* Active Filter Chips & Clear Action */}
         {isFiltered && (
           <div className="flex flex-wrap items-center gap-2 border-t border-border/70 pt-2.5 text-xs">
-            <span className="font-medium text-muted-foreground">Active filters:</span>
+            <span className="font-medium text-muted-foreground">
+              Active filters:
+            </span>
 
             {searchQuery && (
               <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/60 px-2 py-0.5 text-foreground">
@@ -469,9 +480,12 @@ export default function CourseCatalogPage() {
           <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-3">
             <Search className="size-6" />
           </div>
-          <h2 className="text-base font-semibold text-foreground">No courses found</h2>
+          <h2 className="text-base font-semibold text-foreground">
+            No courses found
+          </h2>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            No courses match your active search and filter options. Try adjusting your search query or reset the filters.
+            No courses match your active search and filter options. Try
+            adjusting your search query or reset the filters.
           </p>
           {isFiltered && (
             <Button
