@@ -1,2 +1,6 @@
-// TODO: healthRoutes(): đăng ký GET /health ngoài /api/v1, public, chỉ trả trạng thái tối thiểu.
-// TODO: getHealthStatus(): kiểm tra process sống; nếu readiness cần DB, không trả connection string/error nội bộ.
+import { Elysia } from "elysia";
+
+/** Liveness endpoint: reports only that the HTTP process is running. */
+export const healthRoutes = new Elysia({ name: "health-routes" }).get("/health", () => ({
+  status: "ok",
+}));
