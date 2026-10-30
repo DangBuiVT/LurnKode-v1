@@ -7,9 +7,10 @@ interface CourseGridProps {
   courses: Course[];
   onEnroll?: (courseId: string) => void;
   onResume?: (courseId: string) => void;
+  onLeave?: (courseId: string) => void;
 }
 
-export function CourseGrid({ courses, onEnroll, onResume }: CourseGridProps) {
+export function CourseGrid({ courses, onEnroll, onResume, onLeave }: CourseGridProps) {
   if (courses.length === 0) {
     return (
       <div className="flex min-h-[300px] flex-col items-center justify-center rounded-xl border border-dashed border-border p-8 text-center">
@@ -29,6 +30,7 @@ export function CourseGrid({ courses, onEnroll, onResume }: CourseGridProps) {
           course={course}
           onEnroll={onEnroll}
           onResume={onResume}
+          onLeave={onLeave}
         />
       ))}
     </div>

@@ -48,18 +48,18 @@ export function QuizBuilderDialog({
   const [maxAttempts, setMaxAttempts] = useState<number>(initialQuiz?.max_attempts ?? 3);
 
   // Questions state
-  const [questions, setQuestions] = useState<QuizQuestion[]>(
+  const [questions, setQuestions] = useState<QuizQuestion[]>(() =>
     initialQuiz?.questions || [
       {
-        id: `q-${Date.now()}-1`,
+        id: "q-sample-1",
         prompt: "Câu hỏi mẫu: Nhập nội dung câu hỏi tại đây...",
         type: "single_choice",
         points: 2.5,
         options: [
-          { id: `opt-${Date.now()}-1`, text: "Lựa chọn A", is_correct: true },
-          { id: `opt-${Date.now()}-2`, text: "Lựa chọn B", is_correct: false },
-          { id: `opt-${Date.now()}-3`, text: "Lựa chọn C", is_correct: false },
-          { id: `opt-${Date.now()}-4`, text: "Lựa chọn D", is_correct: false },
+          { id: "opt-sample-1", text: "Lựa chọn A", is_correct: true },
+          { id: "opt-sample-2", text: "Lựa chọn B", is_correct: false },
+          { id: "opt-sample-3", text: "Lựa chọn C", is_correct: false },
+          { id: "opt-sample-4", text: "Lựa chọn D", is_correct: false },
         ],
         explanation: "Giải thích đáp án đúng cho học viên sau khi hoàn thành bài.",
       },
@@ -93,10 +93,10 @@ export function QuizBuilderDialog({
     setQuestions(questions.filter((q) => q.id !== qId));
   };
 
-  const handleUpdateQuestion = (
+  const handleUpdateQuestion = <K extends keyof QuizQuestion>(
     qId: string,
-    field: keyof QuizQuestion,
-    val: any
+    field: K,
+    val: QuizQuestion[K]
   ) => {
     setQuestions(
       questions.map((q) => {

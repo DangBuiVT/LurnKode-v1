@@ -40,8 +40,6 @@ export function QuizManagerView({ course, hierarchy }: QuizManagerViewProps) {
   const [submissionsQuiz, setSubmissionsQuiz] = useState<Quiz | null>(null);
   const [previewQuiz, setPreviewQuiz] = useState<Quiz | null>(null);
 
-  const cleanCourseId = course.id.replace("c-", "");
-
   const refreshQuizzes = () => {
     setQuizzes([...mockDb.getQuizzes(course.id)]);
   };

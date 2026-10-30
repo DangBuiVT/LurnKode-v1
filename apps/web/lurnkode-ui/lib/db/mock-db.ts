@@ -86,6 +86,152 @@ class MockDatabase {
     return newCourse;
   }
 
+  saveCourseWithCurriculum(payload: {
+    courseId?: string;
+    instructor_id: string;
+    title: string;
+    description?: string;
+    status: "draft" | "published" | "archived";
+    category?: string;
+    chapters: Array<{
+      id?: string;
+      title: string;
+      order_index: number;
+      lessons: Array<{
+        id?: string;
+        title: string;
+        order_index: number;
+        materials: Array<{
+          id?: string;
+          title: string;
+          type: "video" | "markdown" | "slide";
+          content?: string | null;
+          is_rag_source: boolean;
+        }>;
+      }>;
+    }>;
+  }): Course {
+    let targetCourse: Course;
+
+    if (payload.courseId) {
+      const existing = this.getCourseById(payload.courseId);
+      if (existing) {
+        existing.title = payload.title;
+        existing.description = payload.description || null;
+        existing.status = payload.status;
+        existing.category = payload.category || "General";
+        targetCourse = existing;
+      } else {
+        targetCourse = {
+          id: payload.courseId.startsWith("c-") ? payload.courseId : `c-${payload.courseId}`,
+          instructor_id: payload.instructor_id,
+          title: payload.title,
+          description: payload.description || null,
+          status: payload.status,
+          category: payload.category || "General",
+          created_at: new Date().toISOString(),
+        };
+        this.courses.unshift(targetCourse);
+      }
+    } else {
+      targetCourse = {
+        id: `c-${Date.now()}`,
+        instructor_id: payload.instructor_id,
+        title: payload.title,
+        description: payload.description || null,
+        status: payload.status,
+        category: payload.category || "General",
+        created_at: new Date().toISOString(),
+      };
+      this.courses.unshift(targetCourse);
+    }
+
+    // Clear existing chapters, lessons, and materials for this course to replace with updated structure
+    const oldChapterIds = this.chapters
+      .filter((ch) => ch.course_id === targetCourse.id || ch.course_id === targetCourse.id.replace("c-", ""))
+      .map((ch) => ch.id);
+
+    const oldLessonIds = this.lessons
+      .filter((l) => oldChapterIds.includes(l.chapter_id))
+      .map((l) => l.id);
+
+    this.materials = this.materials.filter((m) => !oldLessonIds.includes(m.lesson_id));
+    this.lessons = this.lessons.filter((l) => !oldChapterIds.includes(l.chapter_id));
+    this.chapters = this.chapters.filter((ch) => !oldChapterIds.includes(ch.id));
+
+    // Insert chapters, lessons, and materials
+    payload.chapters.forEach((chData, chIdx) => {
+      const chapterId = chData.id || `ch-${Date.now()}-${chIdx + 1}`;
+      const newChapter: Chapter = {
+        id: chapterId,
+        course_id: targetCourse.id,
+        title: chData.title || `Chương ${chIdx + 1}`,
+        order_index: chData.order_index || chIdx + 1,
+        created_at: new Date().toISOString(),
+      };
+      this.chapters.push(newChapter);
+
+      chData.lessons.forEach((lesData, lesIdx) => {
+        const lessonId = lesData.id || `les-${Date.now()}-${chIdx + 1}-${lesIdx + 1}`;
+        const newLesson: Lesson = {
+          id: lessonId,
+          chapter_id: chapterId,
+          title: lesData.title || `Bài học ${chIdx + 1}.${lesIdx + 1}`,
+          order_index: lesData.order_index || lesIdx + 1,
+          created_at: new Date().toISOString(),
+        };
+        this.lessons.push(newLesson);
+
+        lesData.materials.forEach((matData, matIdx) => {
+          const materialId = matData.id || `mat-${Date.now()}-${chIdx + 1}-${lesIdx + 1}-${matIdx + 1}`;
+          const newMaterial: Material = {
+            id: materialId,
+            lesson_id: lessonId,
+            type: matData.type || "markdown",
+            title: matData.title || "Tài liệu học",
+            content: matData.content || null,
+            is_rag_source: Boolean(matData.is_rag_source),
+            created_at: new Date().toISOString(),
+          };
+          this.materials.push(newMaterial);
+        });
+      });
+    });
+
+    return targetCourse;
+  }
+
+  deleteCourse(id: string): boolean {
+    const cleanId = id.startsWith("c-") ? id : `c-${id}`;
+    const rawId = id.replace("c-", "");
+    const idx = this.courses.findIndex((c) => c.id === cleanId || c.id === rawId || c.id === id);
+    if (idx > -1) {
+      const removedCourse = this.courses[idx];
+      this.courses.splice(idx, 1);
+
+      // Cascade remove chapters, lessons, materials
+      const chapterIds = this.chapters
+        .filter((ch) => ch.course_id === removedCourse.id || ch.course_id === rawId)
+        .map((ch) => ch.id);
+
+      const lessonIds = this.lessons
+        .filter((l) => chapterIds.includes(l.chapter_id))
+        .map((l) => l.id);
+
+      this.materials = this.materials.filter((m) => !lessonIds.includes(m.lesson_id));
+      this.lessons = this.lessons.filter((l) => !chapterIds.includes(l.chapter_id));
+      this.chapters = this.chapters.filter((ch) => !chapterIds.includes(ch.id));
+      this.enrollments = this.enrollments.filter(
+        (e) => e.course_id !== removedCourse.id && e.course_id !== rawId
+      );
+      this.quizzes = this.quizzes.filter(
+        (q) => q.course_id !== removedCourse.id && q.course_id !== rawId
+      );
+      return true;
+    }
+    return false;
+  }
+
   // ----------------------------------------------------------------
   // 4-Tier Hierarchy & Sequential Learning Engine
   // ----------------------------------------------------------------
@@ -350,6 +496,22 @@ class MockDatabase {
 
     this.enrollments.push(newEnrollment);
     return newEnrollment;
+  }
+
+  unenrollCourse(learnerId: string, courseId: string): boolean {
+    const cleanId = courseId.startsWith("c-") ? courseId : `c-${courseId}`;
+    const rawId = courseId.replace("c-", "");
+    const idx = this.enrollments.findIndex(
+      (e) =>
+        e.learner_id === learnerId &&
+        (e.course_id === cleanId || e.course_id === rawId || e.course_id === courseId)
+    );
+
+    if (idx > -1) {
+      this.enrollments.splice(idx, 1);
+      return true;
+    }
+    return false;
   }
 
   // ----------------------------------------------------------------

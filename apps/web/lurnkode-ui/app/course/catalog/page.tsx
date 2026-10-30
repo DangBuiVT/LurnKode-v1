@@ -15,6 +15,7 @@ import {
 import { COURSES } from "@/data/courses";
 import { mockDb, CURRENT_USER } from "@/lib/db";
 import { CourseGrid } from "@/components/course/course-grid";
+import { LeaveCourseDialog } from "@/components/course/leave-course-dialog";
 import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Course, CourseStatus } from "@/types/course";
@@ -33,6 +34,11 @@ export default function CourseCatalogPage() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
+
+  // Leave Course Modal state
+  const [leavingCourse, setLeavingCourse] = useState<Course | null>(null);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
 
   // Extract unique instructors and categories
   const instructors = useMemo(() => {
@@ -183,6 +189,42 @@ export default function CourseCatalogPage() {
           : c,
       ),
     );
+
+    const target = courses.find((c) => c.id === courseId);
+    if (target) {
+      setNotification(`Đăng ký thành công khóa học "${target.title}".`);
+      setTimeout(() => setNotification(null), 4000);
+    }
+  };
+
+  const handleOpenLeave = (courseId: string) => {
+    const target = courses.find((c) => c.id === courseId);
+    if (target) {
+      setLeavingCourse(target);
+    }
+  };
+
+  const handleConfirmLeave = () => {
+    if (!leavingCourse) return;
+    setIsLeaving(true);
+
+    setTimeout(() => {
+      mockDb.unenrollCourse(CURRENT_USER.id, leavingCourse.id);
+
+      setCourses((prev) =>
+        prev.map((c) =>
+          c.id === leavingCourse.id
+            ? { ...c, status: "not_enrolled" as const, progress: 0 }
+            : c,
+        ),
+      );
+
+      const title = leavingCourse.title;
+      setLeavingCourse(null);
+      setIsLeaving(false);
+      setNotification(`Bạn đã rời khỏi khóa học "${title}" thành công.`);
+      setTimeout(() => setNotification(null), 4000);
+    }, 300);
   };
 
   const handleResume = (courseId: string) => {
@@ -204,6 +246,22 @@ export default function CourseCatalogPage() {
           topic.
         </p>
       </div>
+
+      {/* Floating / Inline Notification Banner */}
+      {notification && (
+        <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-xs font-medium text-foreground animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+            <span>{notification}</span>
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            className="rounded p-1 text-muted-foreground hover:bg-primary/20 hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Primary Status Tabs Filter */}
       <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
@@ -505,6 +563,7 @@ export default function CourseCatalogPage() {
           courses={paginatedCourses}
           onEnroll={handleEnroll}
           onResume={handleResume}
+          onLeave={handleOpenLeave}
         />
       )}
 
@@ -519,6 +578,17 @@ export default function CourseCatalogPage() {
           onPageSizeChange={handlePageSizeChange}
           pageSizeOptions={[6, 9, 12, 24]}
           itemName="courses"
+        />
+      )}
+
+      {/* Leave Course Confirmation Dialog */}
+      {leavingCourse && (
+        <LeaveCourseDialog
+          isOpen={Boolean(leavingCourse)}
+          courseTitle={leavingCourse.title}
+          onConfirm={handleConfirmLeave}
+          onClose={() => setLeavingCourse(null)}
+          isLeaving={isLeaving}
         />
       )}
     </div>

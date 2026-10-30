@@ -28,16 +28,44 @@ interface LessonQuizCardProps {
   onQuizCompleted?: (passed: boolean) => void;
 }
 
-export function LessonQuizCard({
+export function LessonQuizCard(props: LessonQuizCardProps) {
+  return (
+    <LessonQuizCardContent
+      key={`${props.courseId}-${props.lessonId}`}
+      {...props}
+    />
+  );
+}
+
+function LessonQuizCardContent({
   courseId,
   lessonId,
   lessonTitle,
   onQuizCompleted,
 }: LessonQuizCardProps) {
-  const [quiz, setQuiz] = useState<Quiz | undefined>(undefined);
-  const [latestAttempt, setLatestAttempt] = useState<QuizAttempt | undefined>(undefined);
-  const [allAttempts, setAllAttempts] = useState<QuizAttempt[]>([]);
-  const [mode, setMode] = useState<"intro" | "taking" | "review">("intro");
+  const [quiz] = useState<Quiz | undefined>(() =>
+    mockDb.getQuizByLessonId(courseId, lessonId)
+  );
+  const [allAttempts, setAllAttempts] = useState<QuizAttempt[]>(() => {
+    const foundQuiz = mockDb.getQuizByLessonId(courseId, lessonId);
+    return foundQuiz ? mockDb.getQuizAttempts(foundQuiz.id, CURRENT_USER.id) : [];
+  });
+  const [latestAttempt, setLatestAttempt] = useState<QuizAttempt | undefined>(
+    () => {
+      const foundQuiz = mockDb.getQuizByLessonId(courseId, lessonId);
+      const attempts = foundQuiz
+        ? mockDb.getQuizAttempts(foundQuiz.id, CURRENT_USER.id)
+        : [];
+      return attempts[0];
+    }
+  );
+  const [mode, setMode] = useState<"intro" | "taking" | "review">(() => {
+    const foundQuiz = mockDb.getQuizByLessonId(courseId, lessonId);
+    const attempts = foundQuiz
+      ? mockDb.getQuizAttempts(foundQuiz.id, CURRENT_USER.id)
+      : [];
+    return attempts[0] ? "review" : "intro";
+  });
 
   // Taking state
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -47,24 +75,34 @@ export function LessonQuizCard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load quiz and existing attempts on mount or change
-  useEffect(() => {
-    const foundQuiz = mockDb.getQuizByLessonId(courseId, lessonId);
-    setQuiz(foundQuiz);
+  const handleSubmitQuiz = () => {
+    if (!quiz) return;
+    if (timerRef.current) clearInterval(timerRef.current);
 
-    if (foundQuiz) {
-      const attempts = mockDb.getQuizAttempts(foundQuiz.id, CURRENT_USER.id);
-      setAllAttempts(attempts);
-      const latest = attempts[0];
-      setLatestAttempt(latest);
+    setIsSubmitting(true);
+    setTimeout(() => {
+      const attempt = mockDb.submitQuizAttempt(
+        CURRENT_USER.id,
+        quiz.id,
+        selectedAnswers,
+        timeSpent
+      );
 
-      if (latest) {
-        setMode("review");
-      } else {
-        setMode("intro");
+      setLatestAttempt(attempt);
+      setAllAttempts((prev) => [attempt, ...prev]);
+      setMode("review");
+      setIsSubmitting(false);
+
+      if (attempt.passed) {
+        onQuizCompleted?.(true);
       }
-    }
-  }, [courseId, lessonId]);
+    }, 400);
+  };
+
+  const submitRef = useRef(handleSubmitQuiz);
+  useEffect(() => {
+    submitRef.current = handleSubmitQuiz;
+  });
 
   // Timer countdown handler
   useEffect(() => {
@@ -73,7 +111,7 @@ export function LessonQuizCard({
         setTimeRemaining((prev) => {
           if (prev <= 1) {
             clearInterval(timerRef.current!);
-            handleAutoSubmit();
+            submitRef.current();
             return 0;
           }
           return prev - 1;
@@ -118,34 +156,6 @@ export function LessonQuizCard({
         });
       }
     }
-  };
-
-  const handleAutoSubmit = () => {
-    handleSubmitQuiz();
-  };
-
-  const handleSubmitQuiz = () => {
-    if (!quiz) return;
-    if (timerRef.current) clearInterval(timerRef.current);
-
-    setIsSubmitting(true);
-    setTimeout(() => {
-      const attempt = mockDb.submitQuizAttempt(
-        CURRENT_USER.id,
-        quiz.id,
-        selectedAnswers,
-        timeSpent
-      );
-
-      setLatestAttempt(attempt);
-      setAllAttempts([attempt, ...allAttempts]);
-      setMode("review");
-      setIsSubmitting(false);
-
-      if (attempt.passed) {
-        onQuizCompleted?.(true);
-      }
-    }, 400);
   };
 
   // Helper format time mm:ss

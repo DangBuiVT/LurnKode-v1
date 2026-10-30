@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, PlayCircle, BookOpen } from "lucide-react";
+import { CheckCircle2, PlayCircle, BookOpen, LogOut } from "lucide-react";
 import { Course } from "@/types/course";
 import { Button } from "@/components/ui/button";
 
@@ -9,14 +9,15 @@ interface CourseCardProps {
   course: Course;
   onEnroll?: (courseId: string) => void;
   onResume?: (courseId: string) => void;
+  onLeave?: (courseId: string) => void;
 }
 
-export function CourseCard({ course, onEnroll, onResume }: CourseCardProps) {
+export function CourseCard({ course, onEnroll, onResume, onLeave }: CourseCardProps) {
   const isEnrolled = course.status === "in_progress";
   const isCompleted = course.status === "completed";
   const courseUrl = `/course/${course.id}`;
 
-  const handleAction = (e: React.MouseEvent) => {
+  const handleAction = () => {
     if (isCompleted && onResume) {
       onResume(course.id);
     } else if (isEnrolled && onResume) {
@@ -114,35 +115,53 @@ export function CourseCard({ course, onEnroll, onResume }: CourseCardProps) {
 
         {/* Footer Area */}
         <div className="mt-4 flex items-center justify-between border-t border-border/80 pt-3">
-          <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+          <span className="text-xs text-muted-foreground truncate max-w-[130px]">
             By <span className="font-medium text-foreground">{course.instructor}</span>
           </span>
 
           {isEnrolled || isCompleted ? (
-            <Link href={courseUrl} onClick={handleAction}>
+            <div className="flex items-center gap-1.5">
               <Button
                 type="button"
-                variant={isEnrolled ? "default" : "outline"}
+                variant="ghost"
                 size="sm"
-                className={`h-8 rounded-lg px-3 text-xs font-medium transition-all ${
-                  isCompleted
-                    ? "border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs"
-                }`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onLeave?.(course.id);
+                }}
+                className="h-8 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors gap-1"
+                title="Rời khỏi khóa học"
               >
-                {isCompleted ? (
-                  <>
-                    <BookOpen className="mr-1 size-3.5" />
-                    Review
-                  </>
-                ) : (
-                  <>
-                    <PlayCircle className="mr-1 size-3.5" />
-                    Resume
-                  </>
-                )}
+                <LogOut className="size-3.5" />
+                <span>Leave</span>
               </Button>
-            </Link>
+
+              <Link href={courseUrl} onClick={handleAction}>
+                <Button
+                  type="button"
+                  variant={isEnrolled ? "default" : "outline"}
+                  size="sm"
+                  className={`h-8 rounded-lg px-3 text-xs font-medium transition-all ${
+                    isCompleted
+                      ? "border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs"
+                  }`}
+                >
+                  {isCompleted ? (
+                    <>
+                      <BookOpen className="mr-1 size-3.5" />
+                      Review
+                    </>
+                  ) : (
+                    <>
+                      <PlayCircle className="mr-1 size-3.5" />
+                      Resume
+                    </>
+                  )}
+                </Button>
+              </Link>
+            </div>
           ) : (
             <Button
               type="button"

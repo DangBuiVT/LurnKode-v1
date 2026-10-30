@@ -13,11 +13,13 @@ import {
   Archive,
   Filter,
 } from "lucide-react";
-import { STUDIO_COURSES } from "@/data/studio-courses";
+import { STUDIO_COURSES, getStudioCourses } from "@/data/studio-courses";
 import { StudioCourseCard } from "@/components/studio/studio-course-card";
+import { CourseBuilderDialog } from "@/components/studio/course-builder-dialog";
 import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { StudioCourse, StudioCourseStatus } from "@/types/studio";
+import { Course } from "@/lib/db/schema";
 
 type StatusFilter = "all" | StudioCourseStatus;
 type SortOption = "updated_desc" | "enrolled_desc" | "enrolled_asc" | "title_asc" | "title_desc";
@@ -32,6 +34,11 @@ export default function StudioCoursesPage() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
+
+  // Course Builder dialog state
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
 
   // Extract unique categories
   const categories = useMemo(() => {
@@ -148,8 +155,8 @@ export default function StudioCoursesPage() {
     sortBy !== "updated_desc";
 
   const handleEdit = (courseId: string) => {
-    const course = courses.find((c) => c.id === courseId);
-    alert(`Editing course: "${course?.title}"`);
+    setEditingCourseId(courseId);
+    setIsBuilderOpen(true);
   };
 
   const handleViewSubmissions = (courseId: string) => {
@@ -158,7 +165,19 @@ export default function StudioCoursesPage() {
   };
 
   const handleCreateCourse = () => {
-    alert("Open create course modal / navigate to course builder");
+    setEditingCourseId(null);
+    setIsBuilderOpen(true);
+  };
+
+  const handleSavedCourse = (savedCourse: Course) => {
+    const updated = getStudioCourses();
+    setCourses(updated);
+    setNotification(
+      `Course "${savedCourse.title}" has been successfully ${
+        savedCourse.status === "published" ? "published" : "saved as draft"
+      }!`
+    );
+    setTimeout(() => setNotification(null), 5000);
   };
 
   return (
@@ -183,6 +202,22 @@ export default function StudioCoursesPage() {
           <span>Create Course</span>
         </Button>
       </div>
+
+      {/* Floating / Inline Notification Banner */}
+      {notification && (
+        <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-xs font-medium text-foreground animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+            <span>{notification}</span>
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            className="rounded p-1 text-muted-foreground hover:bg-primary/20 hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Primary Status Tabs Filter */}
       <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
@@ -477,6 +512,17 @@ export default function StudioCoursesPage() {
           itemName="courses"
         />
       )}
+
+      {/* Course Builder & Editor Dialog */}
+      <CourseBuilderDialog
+        isOpen={isBuilderOpen}
+        courseId={editingCourseId}
+        onClose={() => {
+          setIsBuilderOpen(false);
+          setEditingCourseId(null);
+        }}
+        onSaved={handleSavedCourse}
+      />
     </div>
   );
 }

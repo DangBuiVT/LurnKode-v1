@@ -5,7 +5,6 @@ import {
   X,
   CheckCircle2,
   XCircle,
-  Clock,
   Award,
   Users,
   Search,

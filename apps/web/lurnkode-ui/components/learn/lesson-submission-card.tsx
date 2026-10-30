@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { UploadCloud, FileCode, CheckCircle, Clock, X, Paperclip } from "lucide-react";
+import { UploadCloud, FileCode, Clock, X, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Attempt {
@@ -108,7 +108,7 @@ export function LessonSubmissionCard({
       {/* Top Header */}
       <div>
         <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Lesson Assignment (Manual Submission)
+          {lessonTitle ? `${lessonTitle} - Assignment` : "Lesson Assignment (Manual Submission)"}
         </h2>
         <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
           Submit your solution as text or file upload for the Instructor to grade.
