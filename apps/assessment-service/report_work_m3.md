@@ -1,10 +1,6 @@
 # M3 Assessment Service — Interim Progress Report
 
-**Module:** M3 — Assessment & Automated Grading (`apps/assessment-service`)  
-**Owner:** Nguyen Tat Dat (CO3103 — Team 6)  
-**Status:** **100% Ready for Interim Demo** (Port `4003`)  
-**Stack:** Bun, TypeScript, ElysiaJS, Drizzle ORM, Zod, Bun Test  
-**Branch:** `feature/m3-assessment`
+
 
 ---
 
