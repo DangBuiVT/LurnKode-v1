@@ -1,0 +1,15 @@
+[install]
+# Dùng registry mặc định của Bun
+registry = "https://registry.npmjs.org/"
+
+[test]
+# Root thư mục test — Bun tự scan *.test.ts trong tests/
+root = "."
+# Timeout mỗi test (ms)
+timeout = 10000
+# Preload setup file nếu cần mock globals
+# preload = ["./tests/setup.ts"]
+
+[run]
+# Tự động load .env file khi chạy scripts
+env = true
