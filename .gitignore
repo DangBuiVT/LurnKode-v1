@@ -67,4 +67,5 @@ temp/
 /docs/contracts/m4-*.md
 /docs/plans/m4-*.md
 /apps/rag-service/**/*.md
-/apps/rag-service/tests/parseMaterial.ts
+/apps/rag-service/docs/
+/apps/rag-service/tests/

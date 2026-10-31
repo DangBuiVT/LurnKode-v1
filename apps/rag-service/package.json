@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "elysia": "^1.4.0"
+    "drizzle-orm": "^0.45.4",
+    "elysia": "^1.4.0",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",

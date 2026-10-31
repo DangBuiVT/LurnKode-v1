@@ -1,0 +1,16 @@
+# Disposable integration database only; this password is intentionally a local test value.
+services:
+  pgvector-test:
+    image: pgvector/pgvector:pg17@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
+    environment:
+      POSTGRES_PASSWORD: m4_local_test
+      POSTGRES_DB: m4_rag_test
+    ports:
+      - "127.0.0.1:55434:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d m4_rag_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
