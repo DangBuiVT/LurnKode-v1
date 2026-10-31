@@ -203,7 +203,16 @@ export const CourseService = {
     const [chapter] = await db.select().from(chapters).where(eq(chapters.id, chapterId));
     if (!chapter) throw Errors.NotFound('Chapter');
     await this.verifyCourseOwnership(chapter.courseId, user);
-    await db.delete(chapters).where(eq(chapters.id, chapterId));
+    
+    try {
+      await db.delete(chapters).where(eq(chapters.id, chapterId));
+    } catch (err: any) {
+      const code = err.code ?? err.cause?.code;
+      if (code === '23503') {
+        throw Errors.Conflict('CHAPTER_HAS_LEARNER_PROGRESS', 'Cannot delete a chapter that learners have already reached.');
+      }
+      throw err;
+    }
   },
 
   // ==========================================
@@ -284,7 +293,15 @@ export const CourseService = {
     if (!lesson) throw Errors.NotFound('Lesson');
     await this.verifyCourseOwnership(lesson.chapter.courseId, user);
 
-    await db.delete(lessons).where(eq(lessons.id, lessonId));
+    try {
+      await db.delete(lessons).where(eq(lessons.id, lessonId));
+    } catch (err: any) {
+      const code = err.code ?? err.cause?.code;
+      if (code === '23503') {
+        throw Errors.Conflict('LESSON_HAS_LEARNER_PROGRESS', 'Cannot delete a lesson that learners have already reached.');
+      }
+      throw err;
+    }
   },
 
   // ==========================================

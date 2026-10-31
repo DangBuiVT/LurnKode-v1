@@ -64,13 +64,13 @@ export const CreateMaterialBodySchema = t.Object({
   // - contentUrl: optional string
   // - textContent: optional string
   // - metadata: optional Record<string, any>
-  // - isRagSource: optional boolean (mặc định false)
+  // - isRagSource: optional boolean (mặc định false), bo mac dinh false
   type: t.Union([t.Literal('video'), t.Literal('markdown'), t.Literal('slide')]),
   title: t.String({minLength: 1, maxLength: 255}),
   contentUrl: t.Optional(t.String()),
   textContent: t.Optional(t.String()),
   metadata: t.Optional(t.Record(t.String(), t.Any())),
-  isRagSource: t.Optional(t.Boolean({ default: false}))
+  isRagSource: t.Optional(t.Boolean({}))
 });
 
 export const UpdateMaterialBodySchema = t.Partial(CreateMaterialBodySchema, { minProperties: 1 });
