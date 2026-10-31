@@ -1,41 +1,28 @@
 {
   "compilerOptions": {
-    // Target Bun runtime — hỗ trợ ESNext + decorators
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ESNext"],
-
-    // Strict mode — bắt buộc theo coding standard dự án
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-
-    // Path & output
+    "noImplicitOverride": true,
     "rootDir": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
-
-    // Interop
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-
-    // Type declarations
     "types": ["bun-types"],
-
-    // Decorators — cần cho ElysiaJS plugins
     "experimentalDecorators": true,
     "emitDecoratorMetadata": false,
-
-    // Build output (chỉ dùng khi build production)
-    "outDir": "dist",
+    "noEmit": true,
     "skipLibCheck": true
   },
   "include": ["src/**/*", "tests/**/*", "drizzle.config.ts"],
   "exclude": ["node_modules", "dist"]
 }
-

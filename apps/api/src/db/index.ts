@@ -1,5 +1,6 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool, type PoolConfig } from "pg";
+import { env } from "../config/env";
 import * as schema from "./schema";
 
 export { schema };
@@ -11,10 +12,7 @@ export function createDatabaseClient(databaseUrl: string, poolConfig: Omit<PoolC
   return { db: client, pool: clientPool };
 }
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error("DATABASE_URL must be configured before importing the database client");
-
-const database = createDatabaseClient(databaseUrl);
+const database = createDatabaseClient(env.DATABASE_URL);
 export const db: NodePgDatabase<typeof schema> = database.db;
 export const pool = database.pool;
 

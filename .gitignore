@@ -1,22 +1,31 @@
-# Ignore local planning notes
+# Local notes
 /TODO.md
 
-# Local environment and signing keys — KHÔNG commit
+# Environment files and secrets
 .env
-.env.local
-.env.development
-.env.production
-.env.test
+.env.*
+!.env.example
 apps/api/keys/
 *.pem
+*.key
+*.p12
 
-# node_modules (phòng trường hợp cài nhầm ở root)
+# Dependencies and build output
 node_modules/
-
-# Build outputs
 dist/
+coverage/
 .next/
 out/
 
-# Bun lockfile — commit để lock versions
-# bun.lock KHÔNG bị ignore — có thể commit
+# Logs and caches
+*.log
+logs/
+*.tsbuildinfo
+.cache/
+.eslintcache
+
+# Editors and operating systems
+.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db

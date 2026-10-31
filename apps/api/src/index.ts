@@ -1,29 +1,20 @@
+import { env } from "./config/env";
 import { createApp } from "./app";
 import { closeDatabaseConnection } from "./db";
 import { logger } from "./utils/logger";
 
-function readPort(value: string | undefined): number {
-  const port = value === undefined ? 8000 : Number(value);
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new Error("PORT must be an integer between 1 and 65535");
-  }
-  return port;
-}
+// Export the constructed app for API tests and tooling that calls app.handle().
+export const app = await createApp({
+  allowedOrigins: env.ALLOWED_ORIGINS,
+  environment: env.NODE_ENV,
+});
 
 export async function startServer() {
-  const port = readPort(process.env.PORT);
-  const origins = (process.env.ALLOWED_ORIGINS ?? "http://localhost:3000")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-  if (origins.length === 0) throw new Error("ALLOWED_ORIGINS must contain at least one origin");
-
-  const app = await createApp({ allowedOrigins: origins, environment: process.env.NODE_ENV ?? "development" });
-  app.listen({ port, hostname: process.env.HOST ?? "0.0.0.0" });
+  app.listen({ port: env.PORT, hostname: env.HOST });
   const server = app.server;
   if (!server) throw new Error("HTTP server failed to start");
 
-  logger.info("API server started", { port, environment: process.env.NODE_ENV ?? "development" });
+  logger.info("API server started", { port: env.PORT, environment: env.NODE_ENV });
 
   let shuttingDown = false;
   const shutdown = async (signal: "SIGINT" | "SIGTERM"): Promise<void> => {

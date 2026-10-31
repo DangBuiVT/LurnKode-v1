@@ -205,3 +205,11 @@ Dependency, script chạy và biến môi trường cụ thể sẽ được kha
 
 Xem hướng dẫn [thiết lập môi trường M1](../../docs/api/m1/environment-setup.md). Skeleton hiện chưa có manifest, config loader hoặc migration nên các bước chạy API sẽ hoạt động sau khi bootstrap hoàn tất.
 
+
+## M2 Course Management
+
+The M2 learning module is mounted in the same Elysia application as M1. It provides course, enrollment, interaction, and internal RAG-material routes, with API documentation at `/docs`.
+
+M2 uses the canonical M1 `users` table and validates the RS256 bearer token through the M1 auth plugin. Instructor and learner records are membership data linked to those users. Configure `INTERNAL_SERVICE_KEY` for trusted internal service calls; leave it unset only when those routes are not used.
+
+After configuring `DATABASE_URL` and the M1 signing keys, install dependencies with `bun install`, apply migrations with `bun run db:migrate`, and start the API with `bun run dev` from `apps/api`.

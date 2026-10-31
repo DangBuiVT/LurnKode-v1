@@ -1,29 +1,21 @@
-# Dependencies
+# Dependencies and generated output
 node_modules/
+dist/
+coverage/
+*.tsbuildinfo
 
-# Local environment files — KHÔNG commit, chỉ giữ template
+# Local environment and secrets
 .env
-.env.local
-.env.development
-.env.production
-.env.test
-
-# Private keys and certificates
+.env.*
+!.env.example
+keys/
 *.pem
 *.key
 *.p12
-keys/
 
-# Build and test output
-dist/
-coverage/
-
-# Logs and temporary files
+# Logs and editor/OS files
 *.log
-npm-debug.log*
-*.tsbuildinfo
-
-# Local editor and operating system files
+logs/
 .vscode/settings.json
 .idea/
 .DS_Store
