@@ -6,33 +6,37 @@
  * Exposes Instructor, Learner, Internal Judge Callback, and Health Check APIs.
  */
 
-import { Elysia } from "elysia";
 import { env } from "./config/env";
-import { healthRoutes } from "./routes/health.routes";
-import { instructorRoutes } from "./routes/instructor.assessment.routes";
-import { learnerRoutes } from "./routes/learner.assessment.routes";
-import { internalJudgeRoutes } from "./routes/internal.judge.routes";
+import { app } from "./app";
+import {
+  seedAssessment,
+  DEMO_ASSESSMENT_ID,
+  DEMO_MCQ_ITEM_ID,
+  DEMO_CODE_ITEM_ID,
+} from "../scripts/seed-assessment";
 
-const app = new Elysia()
-  .use(healthRoutes)
-  .use(instructorRoutes)
-  .use(learnerRoutes)
-  .use(internalJudgeRoutes)
-  .get("/", () => ({
-    name: "LurnKode Assessment Microservice (M3)",
-    version: "1.0.0",
-    docs: "/swagger",
-    health: "/health/live",
-  }))
-  .listen({
-    port: env.PORT,
-    hostname: env.HOST,
-  });
+// Auto-seed demo quiz in development so the service is ready for demo out-of-the-box
+if (env.NODE_ENV !== "production") {
+  await seedAssessment();
+}
+
+app.listen({
+  port: env.PORT,
+  hostname: env.HOST,
+});
 
 console.info(
   `🚀 Assessment Microservice (M3) running at http://${app.server?.hostname}:${app.server?.port}`
 );
 
-export type App = typeof app;
-export default app;
+if (env.NODE_ENV !== "production") {
+  console.info(`📋 Demo Ready: Assessment ID: ${DEMO_ASSESSMENT_ID}`);
+  console.info(`   - MCQ Item ID:         ${DEMO_MCQ_ITEM_ID}`);
+  console.info(`   - Code Item ID:        ${DEMO_CODE_ITEM_ID}`);
+  console.info(
+    `   - Start Attempt URL:   http://${app.server?.hostname}:${app.server?.port}/learner/assessments/${DEMO_ASSESSMENT_ID}/attempts`
+  );
+}
 
+export type { App } from "./app";
+export default app;

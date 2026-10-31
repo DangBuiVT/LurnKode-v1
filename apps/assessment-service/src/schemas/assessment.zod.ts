@@ -19,11 +19,49 @@ export const mcqOptionSchema = z.object({
   text: z.string().min(1),
 });
 
-export const mcqPayloadSchema = z.object({
-  mcqType: mcqSelectionTypeSchema,
-  options: z.array(mcqOptionSchema).min(2),
-  correctOptionIds: z.array(z.string().min(1)).min(1),
-});
+export const mcqPayloadSchema = z
+  .object({
+    mcqType: mcqSelectionTypeSchema,
+    options: z.array(mcqOptionSchema).min(2),
+    correctOptionIds: z.array(z.string().min(1)).min(1),
+  })
+  .superRefine((payload, ctx) => {
+    const optionIds = new Set(payload.options.map((option) => option.id));
+
+    if (optionIds.size !== payload.options.length) {
+      ctx.addIssue({
+        code: "custom",
+        message: "MCQ option IDs must be unique",
+        path: ["options"],
+      });
+    }
+
+    for (const correctId of payload.correctOptionIds) {
+      if (!optionIds.has(correctId)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Correct option '${correctId}' does not exist in options`,
+          path: ["correctOptionIds"],
+        });
+      }
+    }
+
+    if (payload.mcqType === "single" && payload.correctOptionIds.length !== 1) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Single-choice questions must have exactly one correct option",
+        path: ["correctOptionIds"],
+      });
+    }
+
+    if (new Set(payload.correctOptionIds).size !== payload.correctOptionIds.length) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Correct option IDs must be unique",
+        path: ["correctOptionIds"],
+      });
+    }
+  });
 
 /**
  * Programming payload schema
@@ -97,32 +135,68 @@ export const submitMcqAnswerSchema = z.object({
 export const submitCodeSchema = z.object({
   itemId: z.string().min(1),
   language: z.enum(["python", "javascript", "typescript"]),
-  sourceCode: z.string().min(1),
+  sourceCode: z.string().min(1).max(65536),
 });
 
 /**
  * Inter-Service Contracts
  */
-export const judgeCallbackSchema = z.object({
-  submissionId: z.string().min(1),
-  judgeJobId: z.string().optional().nullable(),
-  status: z.enum(["completed", "failed"]),
-  finalStatus: judgeVerdictSchema.optional(),
-  error: z.string().optional().nullable(),
-  executionMs: z.number().nonnegative().default(0),
-  memoryKb: z.number().nonnegative().default(0),
-  testResults: z
-    .array(
-      z.object({
-        testCaseId: z.string().min(1),
-        status: judgeVerdictSchema,
-        executionMs: z.number().nonnegative().default(0),
-        message: z.string().optional().nullable(),
-        hidden: z.boolean().default(true),
-      })
-    )
-    .default([]),
-});
+export const judgeCallbackSchema = z
+  .object({
+    submissionId: z.string().min(1),
+    judgeJobId: z.string().optional().nullable(),
+    status: z.enum(["completed", "failed"]),
+    finalStatus: judgeVerdictSchema.optional(),
+    error: z.string().optional().nullable(),
+    executionMs: z.number().nonnegative().default(0),
+    memoryKb: z.number().nonnegative().default(0),
+    testResults: z
+      .array(
+        z.object({
+          testCaseId: z.string().min(1),
+          status: judgeVerdictSchema,
+          executionMs: z.number().nonnegative().default(0),
+          message: z.string().optional().nullable(),
+          hidden: z.boolean().default(true),
+        })
+      )
+      .default([]),
+  })
+  .superRefine((payload, ctx) => {
+    if (payload.status === "completed") {
+      if (!payload.finalStatus) {
+        ctx.addIssue({
+          code: "custom",
+          message: "finalStatus is required when status is 'completed'",
+          path: ["finalStatus"],
+        });
+      }
+      if (payload.testResults.length === 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "testResults must not be empty when status is 'completed'",
+          path: ["testResults"],
+        });
+      }
+    }
+
+    if (payload.status === "failed" && !payload.error) {
+      ctx.addIssue({
+        code: "custom",
+        message: "error is required when status is 'failed'",
+        path: ["error"],
+      });
+    }
+
+    const testCaseIds = payload.testResults.map((result) => result.testCaseId);
+    if (new Set(testCaseIds).size !== testCaseIds.length) {
+      ctx.addIssue({
+        code: "custom",
+        message: "testResults must not contain duplicate testCaseId values",
+        path: ["testResults"],
+      });
+    }
+  });
 
 export type CreateAssessmentInput = z.infer<typeof createAssessmentSchema>;
 export type CreateAssessmentItemInput = z.infer<typeof createAssessmentItemSchema>;

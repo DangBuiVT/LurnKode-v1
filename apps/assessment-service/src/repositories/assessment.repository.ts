@@ -21,8 +21,10 @@ export class AssessmentRepository {
   private codeSubmissions = new Map<string, CodeSubmission>();
   private testResults = new Map<string, TestResult[]>();
 
-  async createAssessment(data: Omit<Assessment, "id" | "createdAt" | "updatedAt">): Promise<Assessment> {
-    const id = crypto.randomUUID();
+  async createAssessment(
+    data: Omit<Assessment, "id" | "createdAt" | "updatedAt"> & { id?: string }
+  ): Promise<Assessment> {
+    const id = data.id ?? crypto.randomUUID();
     const assessment: Assessment = {
       ...data,
       id,
@@ -49,8 +51,10 @@ export class AssessmentRepository {
     return updated;
   }
 
-  async createItem(data: Omit<AssessmentItem, "id" | "createdAt" | "updatedAt">): Promise<AssessmentItem> {
-    const id = crypto.randomUUID();
+  async createItem(
+    data: Omit<AssessmentItem, "id" | "createdAt" | "updatedAt"> & { id?: string }
+  ): Promise<AssessmentItem> {
+    const id = data.id ?? crypto.randomUUID();
     const item: AssessmentItem = {
       ...data,
       id,
@@ -146,6 +150,12 @@ export class AssessmentRepository {
 
   async findCodeSubmissionById(id: string): Promise<CodeSubmission | null> {
     return this.codeSubmissions.get(id) ?? null;
+  }
+
+  async listCodeSubmissionsByAttemptId(attemptId: string): Promise<CodeSubmission[]> {
+    return Array.from(this.codeSubmissions.values())
+      .filter((submission) => submission.attemptId === attemptId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }
 
   async updateCodeSubmission(

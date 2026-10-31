@@ -5,11 +5,22 @@
 
 import { assessmentService } from "../src/services/assessment.service";
 
-async function seed() {
+export const DEMO_ASSESSMENT_ID = "a0000000-0000-4000-8000-000000000001";
+export const DEMO_MCQ_ITEM_ID = "b0000000-0000-4000-8000-000000000001";
+export const DEMO_CODE_ITEM_ID = "c0000000-0000-4000-8000-000000000001";
+export const DEMO_COURSE_ID = "c4b184f4-5df6-48b2-b5e2-2a7e7be28f11";
+
+export async function seedAssessment() {
+  const existing = await assessmentService.getAssessment(DEMO_ASSESSMENT_ID);
+  if (existing) {
+    return existing;
+  }
+
   console.info("🌱 Seeding assessment data...");
 
   const assessment = await assessmentService.createAssessment({
-    courseId: "c4b184f4-5df6-48b2-b5e2-2a7e7be28f11",
+    id: DEMO_ASSESSMENT_ID,
+    courseId: DEMO_COURSE_ID,
     title: "Data Structures & Algorithms - Quiz 1",
     description: "Assessment on arrays, trees, and dynamic programming.",
     maxAttempts: 3,
@@ -17,6 +28,7 @@ async function seed() {
   });
 
   await assessmentService.addItem(assessment.id, {
+    id: DEMO_MCQ_ITEM_ID,
     type: "mcq",
     title: "Binary Search Complexity",
     prompt: "What is the worst-case time complexity of binary search?",
@@ -37,6 +49,7 @@ async function seed() {
   });
 
   await assessmentService.addItem(assessment.id, {
+    id: DEMO_CODE_ITEM_ID,
     type: "programming",
     title: "Palindrome Checker",
     prompt: "Implement a function `is_palindrome(s: str) -> bool`.",
@@ -56,8 +69,11 @@ async function seed() {
     },
   });
 
-  await assessmentService.publishAssessment(assessment.id);
-  console.info(`✅ Seeded and published assessment: ${assessment.id}`);
+  const published = await assessmentService.publishAssessment(assessment.id);
+  console.info(`✅ Seeded and published assessment: ${published.id}`);
+  return published;
 }
 
-seed().catch(console.error);
+if (import.meta.main) {
+  seedAssessment().catch(console.error);
+}

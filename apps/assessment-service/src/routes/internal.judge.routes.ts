@@ -11,6 +11,7 @@ import { Elysia } from "elysia";
 import { callbackService } from "../services/callback.service";
 import { judgeCallbackSchema } from "../schemas/assessment.zod";
 import { verifyInternalToken } from "../middlewares/auth.middleware";
+import { handleRouteError } from "../middlewares/error.middleware";
 
 export const internalJudgeRoutes = new Elysia({ prefix: "/internal/judge" })
   .post("/callback", async ({ headers, body, set }) => {
@@ -36,8 +37,6 @@ export const internalJudgeRoutes = new Elysia({ prefix: "/internal/judge" })
         idempotent: result.idempotent,
       };
     } catch (err: unknown) {
-      set.status = 400;
-      return { error: (err as Error).message };
+      return handleRouteError(err, set);
     }
   });
-

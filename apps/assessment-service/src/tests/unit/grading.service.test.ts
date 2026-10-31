@@ -34,6 +34,10 @@ describe("gradeMcq", () => {
   it("duplicate selections are ignored", () => {
     expect(gradeMcq(["a", "a"], ["a"], 10)).toEqual({ score: 10, status: "correct" });
   });
+
+  it("empty answer key never awards points", () => {
+    expect(gradeMcq([], [], 10)).toEqual({ score: 0, status: "incorrect" });
+  });
 });
 
 describe("computeProgrammingScore", () => {

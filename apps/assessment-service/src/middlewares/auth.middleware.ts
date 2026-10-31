@@ -11,13 +11,22 @@
  * - Internal services authenticate via:
  *   - X-Internal-Service-Key (M2 standard)
  *   - X-Internal-Token (M3/M6 default)
+ *
+ * M3 trusts these headers only because it is expected to sit behind M1 on a private
+ * network. Missing/invalid identity is rejected (401) and role mismatches are
+ * rejected (403) rather than silently falling back to a development user.
  */
 
+import { createHash, timingSafeEqual } from "node:crypto";
 import { env } from "../config/env";
+import { ServiceError } from "./error.middleware";
+
+export const USER_ROLES = ["instructor", "student", "learner", "admin"] as const;
+export type UserRole = (typeof USER_ROLES)[number];
 
 export interface UserContext {
   userId: string;
-  role: "instructor" | "student" | "learner" | "admin";
+  role: UserRole;
   correlationId?: string;
 }
 
@@ -41,18 +50,61 @@ function getHeaderValue(
   return null;
 }
 
+function isUserRole(value: string | null): value is UserRole {
+  return value !== null && (USER_ROLES as readonly string[]).includes(value);
+}
+
 export function extractUserContext(
   headers: Headers | Record<string, string | undefined>
 ): UserContext | null {
   const userId = getHeaderValue(headers, "x-user-id");
-  const role = getHeaderValue(headers, "x-user-role") as UserContext["role"] | null;
+  const role = getHeaderValue(headers, "x-user-role");
   const correlationId = getHeaderValue(headers, "x-correlation-id") ?? undefined;
 
-  if (!userId || !role) {
+  if (!userId || !isUserRole(role)) {
     return null;
   }
 
   return { userId, role, correlationId };
+}
+
+/**
+ * Enforces authenticated identity and an allowed role set.
+ * Throws 401 for missing/invalid headers and 403 for a disallowed role.
+ */
+export function requireRole(
+  headers: Headers | Record<string, string | undefined>,
+  allowedRoles: readonly UserRole[]
+): UserContext {
+  const context = extractUserContext(headers);
+
+  if (!context) {
+    throw new ServiceError(
+      401,
+      "UNAUTHORIZED",
+      "Missing or invalid identity headers (X-User-Id, X-User-Role)"
+    );
+  }
+
+  if (!allowedRoles.includes(context.role)) {
+    throw new ServiceError(
+      403,
+      "FORBIDDEN",
+      `Role '${context.role}' is not allowed to access this endpoint`
+    );
+  }
+
+  return context;
+}
+
+/**
+ * Constant-time comparison so token verification does not leak length/content
+ * through response timing. Hashing first keeps both inputs the same length.
+ */
+function constantTimeEquals(a: string, b: string): boolean {
+  const digestA = createHash("sha256").update(a).digest();
+  const digestB = createHash("sha256").update(b).digest();
+  return timingSafeEqual(digestA, digestB);
 }
 
 /**
@@ -66,11 +118,10 @@ export function extractUserContext(
 export function verifyInternalToken(
   headers: Headers | Record<string, string | undefined>
 ): boolean {
-  const token =
-    getHeaderValue(headers, "x-internal-service-key") ||
-    getHeaderValue(headers, "x-internal-token");
+  const candidates = [
+    getHeaderValue(headers, "x-internal-service-key"),
+    getHeaderValue(headers, "x-internal-token"),
+  ].filter((value): value is string => Boolean(value));
 
-  return Boolean(token && token === env.INTERNAL_SERVICE_TOKEN);
+  return candidates.some((token) => constantTimeEquals(token, env.INTERNAL_SERVICE_TOKEN));
 }
-
-

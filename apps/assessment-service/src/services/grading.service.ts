@@ -39,6 +39,11 @@ export function gradeMcq(
   const selectedSet = new Set(selectedOptionIds);
   const correctSet = new Set(correctOptionIds);
 
+  // Defensive: an empty answer key must never award points for an empty selection.
+  if (correctSet.size === 0) {
+    return { score: 0, status: "incorrect" };
+  }
+
   if (selectedSet.size !== correctSet.size) {
     return { score: 0, status: "incorrect" };
   }

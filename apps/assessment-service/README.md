@@ -83,6 +83,25 @@ docker compose up -d
 bun run seed
 ```
 
+### Authentication
+
+Public routes expect identity to be injected by the M1 API Gateway. For local
+calls, pass the same headers directly:
+
+```bash
+# Instructor routes
+-H "X-User-Id: instructor-1" -H "X-User-Role: instructor"
+
+# Learner routes
+-H "X-User-Id: learner-1" -H "X-User-Role: learner"
+
+# Internal judge callback (M6)
+-H "X-Internal-Token: $INTERNAL_SERVICE_TOKEN"
+```
+
+Requests without an identity now fail with `401`; a valid identity with the
+wrong role fails with `403`. There is no development-user fallback.
+
 ---
 
 ## 📡 API Endpoints
@@ -97,5 +116,5 @@ bun run seed
 | `POST` | `/learner/assessments/:id/attempts` | Start attempt (queries M2 for enrollment) |
 | `POST` | `/learner/attempts/:attemptId/answers` | Submit synchronous MCQ answer |
 | `POST` | `/learner/attempts/:attemptId/code-submissions`| Submit code for async judge evaluation |
-| `POST` | `/learner/attempts/:attemptId/finish` | Finish attempt & emit completion event |
+| `POST` | `/learner/attempts/:attemptId/finish` | Finish attempt (`grading` if judge jobs pending, otherwise `completed` + event) |
 | `POST` | `/internal/judge/callback` | Authenticated callback from M6 Judge Worker |
