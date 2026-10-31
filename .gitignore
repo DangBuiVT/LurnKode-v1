@@ -69,3 +69,4 @@ temp/
 /apps/rag-service/**/*.md
 /apps/rag-service/docs/
 /apps/rag-service/tests/
+/apps/rag-service/scripts/

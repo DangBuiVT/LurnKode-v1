@@ -184,12 +184,17 @@ export class PgVectorStore implements VectorStore {
     });
   }
 
-  async deactivateMaterial(materialId: string): Promise<void> {
+  async deactivateMaterial(materialId: string, expectedGeneration?: number): Promise<void> {
     const id = validateExternalId(materialId);
     const sources = tables.ragSources;
+    if (expectedGeneration !== undefined) validateSourceGeneration(expectedGeneration);
 
     await this.db.transaction(async tx => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${id}, 0))`);
+      if (expectedGeneration !== undefined) {
+        const [source] = await tx.select().from(sources).where(eq(sources.materialId, id));
+        if ((source?.generation ?? 0) !== expectedGeneration) throw new SourceVersionConflict();
+      }
       await tx
         .insert(sources)
         .values({ materialId: id, generation: 1, status: "inactive" })

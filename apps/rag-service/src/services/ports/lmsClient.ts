@@ -8,5 +8,4 @@ export interface CourseAccessClient {
 }
 export interface MaterialClient {
   getMaterial(materialId: string): Promise<MaterialSource | null>;
-  // TODO: Thống nhất cách đọc bytes/format/revision cho nguồn file với M2.
 }
