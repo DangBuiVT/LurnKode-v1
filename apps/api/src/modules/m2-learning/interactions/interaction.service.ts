@@ -80,8 +80,8 @@ export const InteractionService = {
       parentAuthorId = parent.userId;
     }
 
-    // Tránh lỗi khóa ngoại nếu user (vd. Admin) chưa có dòng trong bảng users
-    await db.insert(users).values({ id: user.id }).onConflictDoNothing();
+    const [account] = await db.select({ id: users.id }).from(users).where(eq(users.id, user.id));
+    if (!account) throw Errors.Unauthorized();
 
     const [discussion] = await db.insert(discussions)
       .values({

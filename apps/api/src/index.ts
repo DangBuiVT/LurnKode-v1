@@ -1,51 +1,45 @@
-import { Elysia } from 'elysia';
-import { cors } from '@elysiajs/cors';
-import { swagger } from '@elysiajs/swagger';
-import { env } from './config/env';
-import { AppError } from './utils/errors';
-import { fail } from './utils/response';
-import { m2LearningModule } from './modules/m2-learning';
+import { env } from "./config/env";
+import { createApp } from "./app";
+import { closeDatabaseConnection } from "./db";
+import { logger } from "./utils/logger";
 
-export const app = new Elysia()
-  .use(
-    swagger({
-      path: '/docs',
-      documentation: {
-        info: {
-          title: 'LurnKode API — M2 Learning Management',
-          version: '1.0.0',
-        },
-      },
-    })
-  )
-  .use(
-    cors({
-      origin: env.ALLOWED_ORIGINS,
-      credentials: true,
-    })
-  )
-  .onError(({ code, error, set }) => {
-    if (error instanceof AppError) {
-      set.status = error.statusCode;
-      return fail(error.code, error.message, error.details);
-    }
-    if (code === 'VALIDATION') {
-      set.status = 400;
-      return fail('VALIDATION_ERROR', 'Invalid request payload or parameters.', {
-        summary: error.message,
-      });
-    }
-    if (code === 'NOT_FOUND') {
-      set.status = 404;
-      return fail('ROUTE_NOT_FOUND', 'The requested API endpoint does not exist.');
-    }
-    console.error('🔥 [UNHANDLED ERROR]:', error);
-    set.status = 500;
-    return fail('INTERNAL_SERVER_ERROR', 'An unexpected server error occurred.');
-  })
-  .get('/health', () => ({ status: 'ok', version: '0.1.0' }))
-  .use(m2LearningModule)
-  .listen(env.PORT);
+// Export the constructed app for API tests and tooling that calls app.handle().
+export const app = await createApp({
+  allowedOrigins: env.ALLOWED_ORIGINS,
+  environment: env.NODE_ENV,
+});
 
-console.log(`🚀 LurnKode API running at http://${app.server?.hostname}:${app.server?.port}`);
-console.log(`📖 Swagger UI available at http://localhost:${env.PORT}/docs`);
+export async function startServer() {
+  app.listen({ port: env.PORT, hostname: env.HOST });
+  const server = app.server;
+  if (!server) throw new Error("HTTP server failed to start");
+
+  logger.info("API server started", { port: env.PORT, environment: env.NODE_ENV });
+
+  let shuttingDown = false;
+  const shutdown = async (signal: "SIGINT" | "SIGTERM"): Promise<void> => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logger.info("Shutting down API server", { signal });
+    try {
+      server.stop(true);
+      await closeDatabaseConnection();
+    } catch (error) {
+      logger.error("Graceful shutdown failed", { error });
+      process.exitCode = 1;
+    }
+  };
+
+  process.once("SIGINT", () => void shutdown("SIGINT"));
+  process.once("SIGTERM", () => void shutdown("SIGTERM"));
+  return { app, server, shutdown };
+}
+
+if (import.meta.main) {
+  try {
+    await startServer();
+  } catch (error) {
+    logger.error("API server startup failed", { error });
+    process.exitCode = 1;
+  }
+}

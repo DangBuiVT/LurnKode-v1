@@ -1,6 +1,31 @@
+# Local notes
+/TODO.md
 
-# Ignore env files
+# Environment files and secrets
 .env
 .env.*
 !.env.example
-apps/api/.env
+apps/api/keys/
+*.pem
+*.key
+*.p12
+
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+.next/
+out/
+
+# Logs and caches
+*.log
+logs/
+*.tsbuildinfo
+.cache/
+.eslintcache
+
+# Editors and operating systems
+.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db

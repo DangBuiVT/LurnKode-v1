@@ -16,10 +16,11 @@ export const CourseService = {
    * Helper nội bộ: Đảm bảo user_id từ JWT đã tồn tại trong bảng users/instructors (tránh lỗi FK khi test độc lập)
    */
   async ensureInstructorExists(instructorId: string) {
-    // TODO:
-    // 1. Dùng db.insert(users).values({ id: instructorId }).onConflictDoNothing()
-    // 2. Dùng db.insert(instructors).values({ id: instructorId }).onConflictDoNothing()
-    await db.insert(users).values({id: instructorId}).onConflictDoNothing();
+    const [user] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.id, instructorId));
+    if (!user) throw Errors.NotFound('Instructor user');
+    if (user.role !== 'Instructor' && user.role !== 'Admin') {
+      throw Errors.Forbidden('INSTRUCTOR_ROLE_REQUIRED', 'Only instructors and administrators can manage courses.');
+    }
     await db.insert(instructors).values({id: instructorId}).onConflictDoNothing();
   },
 

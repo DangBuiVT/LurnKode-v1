@@ -185,3 +185,9 @@ drizzle/meta/  # có thể commit nếu muốn track migrations
 - [ ] `JUDGE_WORKER_AUTH` token **không bị log**
 - [ ] GitHub Secrets đã được cấu hình đầy đủ
 - [ ] `ALLOWED_ORIGINS` chỉ chứa domains thực sự cần thiết (không dùng `*`)
+
+## M1 — Auth Service
+
+M1 có hướng dẫn setup riêng tại [docs/api/m1/environment-setup.md](../api/m1/environment-setup.md). M1 dùng database riêng và JWT RS256/JWKS; không cần Redis, LLM hay Judge Worker. Hướng dẫn tổng quát hiện tại trong file này còn chứa cấu hình cho các module khác; không sao chép các biến đó vào môi trường M1.
+
+

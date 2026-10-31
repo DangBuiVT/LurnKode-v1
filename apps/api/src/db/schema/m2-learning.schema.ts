@@ -13,7 +13,8 @@ import {
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { users, instructors, learners } from './m1-users.schema';
+import { users } from './users';
+import { instructors, learners } from './m1-users.schema';
 
 // 1. ENUMS
 export const courseStatusEnum = pgEnum('course_status', ['draft', 'published']);

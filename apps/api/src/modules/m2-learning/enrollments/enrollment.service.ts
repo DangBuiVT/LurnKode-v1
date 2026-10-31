@@ -7,8 +7,9 @@ import { CourseService } from '../courses/course.service';
 
 export const EnrollmentService = {
   async ensureLearnerExists(learnerId: string) {
-    // TODO: Insert learnerId vào bảng users và learners với .onConflictDoNothing()
-    await db.insert(users).values({id: learnerId}).onConflictDoNothing();
+    const [user] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.id, learnerId));
+    if (!user) throw Errors.NotFound('Learner user');
+    if (user.role !== 'Learner') throw Errors.Forbidden('LEARNER_ROLE_REQUIRED', 'Only learners can enroll in courses.');
     await db.insert(learners).values({id: learnerId}).onConflictDoNothing();
   },
 
