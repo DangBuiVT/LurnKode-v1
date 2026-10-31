@@ -16,7 +16,7 @@ export interface SimulateJudgeOptions {
   internalToken?: string;
   submissionId: string;
   testCaseIds?: string[];
-  verdict?: "AC" | "WA" | "TLE" | "MLE" | "RE" | "CE";
+  verdict?: "AC" | "WA" | "TLE" | "MLE" | "RE" | "RTE" | "CE";
   error?: string | null;
 }
 
@@ -30,7 +30,7 @@ export async function simulateJudgeCallback(
   let internalToken = env.INTERNAL_SERVICE_TOKEN;
   let submissionId = "";
   let testCaseIds = ["tc_1", "tc_2", "tc_3"];
-  let verdict: "AC" | "WA" | "TLE" | "MLE" | "RE" | "CE" = "AC";
+  let verdict: "AC" | "WA" | "TLE" | "MLE" | "RE" | "RTE" | "CE" = "AC";
   let error: string | null = null;
 
   if (typeof serviceUrlOrOptions === "object") {
@@ -113,7 +113,7 @@ Usage:
   bun run fake-judge <submissionId> --fail
 
 Options:
-  verdict   AC (default) | WA | TLE | MLE | RE | CE
+  verdict   AC (default) | WA | TLE | MLE | RE | RTE | CE
   --fail    Simulate worker execution crash
 
 Examples:

@@ -39,6 +39,17 @@ describe("Programming Grading Engine", () => {
     expect(result.finalStatus).toBe("RE");
   });
 
+  it("accepts proposal RTE verdict alias", () => {
+    const reports: TestResultReport[] = [
+      { testCaseId: "test_1", status: "RTE" },
+      { testCaseId: "test_2", status: "AC" },
+    ];
+    const result = computeProgrammingScore(specs, reports, 50);
+    // test_2 passes (3 / 5 * 50 = 30 points), first failure is RTE
+    expect(result.score).toBe(30);
+    expect(result.finalStatus).toBe("RTE");
+  });
+
   it("enforces score bounds between 0 and maxPoints", () => {
     const emptySpecs: TestCaseSpec[] = [];
     const emptyResult = computeProgrammingScore(emptySpecs, [], 100);

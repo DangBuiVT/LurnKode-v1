@@ -12,7 +12,7 @@ export type AssessmentItemType = "mcq" | "programming";
 export type McqSelectionType = "single" | "multiple";
 export type AttemptStatus = "in_progress" | "submitted" | "grading" | "completed" | "failed";
 export type CodeSubmissionStatus = "queued" | "running" | "judged" | "failed";
-export type JudgeVerdict = "AC" | "WA" | "TLE" | "MLE" | "RE" | "CE";
+export type JudgeVerdict = "AC" | "WA" | "TLE" | "MLE" | "RE" | "RTE" | "CE";
 export type McqAnswerStatus = "correct" | "incorrect";
 
 export interface McqOption {

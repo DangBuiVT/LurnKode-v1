@@ -9,7 +9,7 @@ export const assessmentStatusSchema = z.enum(["draft", "published", "archived"])
 export const assessmentItemTypeSchema = z.enum(["mcq", "programming"]);
 export const mcqSelectionTypeSchema = z.enum(["single", "multiple"]);
 export const attemptStatusSchema = z.enum(["in_progress", "submitted", "grading", "completed", "failed"]);
-export const judgeVerdictSchema = z.enum(["AC", "WA", "TLE", "MLE", "RE", "CE"]);
+export const judgeVerdictSchema = z.enum(["AC", "WA", "TLE", "MLE", "RE", "RTE", "CE"]);
 
 /**
  * MCQ payload schema

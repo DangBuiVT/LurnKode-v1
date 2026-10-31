@@ -66,6 +66,7 @@ export type TestExecutionStatus =
   | "TLE" // Time Limit Exceeded
   | "MLE" // Memory Limit Exceeded
   | "RE"  // Runtime Error
+  | "RTE" // Runtime Error (proposal alias)
   | "CE"; // Compilation Error
 
 /**
