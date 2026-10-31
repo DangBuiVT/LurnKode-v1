@@ -51,7 +51,7 @@ export default function CourseQuizzesPage({ params }: PageProps) {
     <Suspense
       fallback={
         <div className="py-12 text-center text-sm text-muted-foreground">
-          Đang tải không gian quản lý bài trắc nghiệm...
+          Loading quiz management workspace...
         </div>
       }
     >

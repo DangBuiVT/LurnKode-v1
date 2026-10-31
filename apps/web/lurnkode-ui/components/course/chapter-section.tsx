@@ -29,6 +29,11 @@ export function ChapterSection({
 }: ChapterSectionProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
+  const cleanChapterTitle = chapter.title
+    .replace(/^chương\s*\d+[:.\s-]*/i, "")
+    .replace(/^chapter\s*\d+[:.\s-]*/i, "")
+    .trim();
+
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xs">
       {/* Chapter Header / Accordion trigger */}
@@ -44,7 +49,7 @@ export function ChapterSection({
             <ChevronRight className="size-4.5 text-muted-foreground transition-transform" />
           )}
           <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
-            Chapter {chapter.chapterNumber}: {chapter.title}
+            Chapter {chapter.chapterNumber}: {cleanChapterTitle}
           </h2>
         </div>
 
@@ -86,7 +91,7 @@ export function ChapterSection({
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-foreground">
-                      {lesson.orderIndex} Lesson {lesson.lessonNumber}: {lesson.title}
+                      {lesson.orderIndex} {lesson.title.replace(/^bài\s*\d+[:.\s-]*/i, "").replace(/^lesson\s*\d+[:.\s-]*/i, "").trim()}
                     </span>
                   </div>
 

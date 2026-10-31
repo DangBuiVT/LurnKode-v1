@@ -170,11 +170,11 @@ function LessonQuizCardContent({
       <div className="rounded-xl border bg-card p-6 text-center space-y-3">
         <HelpCircle className="h-10 w-10 text-muted-foreground mx-auto" />
         <h3 className="text-base font-semibold text-foreground">
-          Chưa có bài trắc nghiệm cho bài học này
+          No quiz available for this lesson
         </h3>
         <p className="text-xs text-muted-foreground max-w-md mx-auto">
-          Giảng viên chưa cấu hình bài trắc nghiệm tự động cho bài học &quot;{lessonTitle}&quot;.
-          Bạn có thể nộp bài tập tự luận hoặc chờ giảng viên cập nhật nội dung.
+          The instructor has not configured an automated quiz for lesson &quot;{lessonTitle}&quot;.
+          You can submit an assignment or check back later when updated.
         </p>
       </div>
     );
@@ -195,7 +195,7 @@ function LessonQuizCardContent({
           <div className="border-b pb-4">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary mb-2">
               <Award className="h-3.5 w-3.5" />
-              Chấm điểm tự động (Auto-Graded Quiz)
+              Auto-Graded Quiz
             </div>
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
               {quiz.title}
@@ -209,23 +209,23 @@ function LessonQuizCardContent({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
               <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
-                <FileCheck2 className="h-3.5 w-3.5" /> Số câu hỏi
+                <FileCheck2 className="h-3.5 w-3.5" /> Questions
               </span>
               <p className="text-base font-bold text-foreground">
-                {quiz.questions.length} câu
+                {quiz.questions.length} questions
               </p>
             </div>
             <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
               <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
-                <Clock className="h-3.5 w-3.5" /> Thời gian
+                <Clock className="h-3.5 w-3.5" /> Time Limit
               </span>
               <p className="text-base font-bold text-foreground">
-                {quiz.time_limit_minutes > 0 ? `${quiz.time_limit_minutes} phút` : "Không giới hạn"}
+                {quiz.time_limit_minutes > 0 ? `${quiz.time_limit_minutes} min` : "No limit"}
               </p>
             </div>
             <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
               <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
-                <Flame className="h-3.5 w-3.5" /> Điểm đạt
+                <Flame className="h-3.5 w-3.5" /> Passing Score
               </span>
               <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">
                 &ge; {quiz.passing_score_percentage}%
@@ -233,10 +233,10 @@ function LessonQuizCardContent({
             </div>
             <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
               <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
-                <RotateCcw className="h-3.5 w-3.5" /> Số lần làm
+                <RotateCcw className="h-3.5 w-3.5" /> Max Attempts
               </span>
               <p className="text-base font-bold text-foreground">
-                {quiz.max_attempts > 0 ? `Tối đa ${quiz.max_attempts} lần` : "Không giới hạn"}
+                {quiz.max_attempts > 0 ? `${quiz.max_attempts} max` : "Unlimited"}
               </p>
             </div>
           </div>
@@ -244,12 +244,12 @@ function LessonQuizCardContent({
           {/* Instructions Alert */}
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-xs space-y-2 text-foreground/90">
             <h4 className="font-semibold flex items-center gap-1.5 text-primary">
-              <AlertCircle className="h-4 w-4" /> Hướng dẫn làm bài:
+              <AlertCircle className="h-4 w-4" /> Quiz Instructions:
             </h4>
             <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-1">
-              <li>Hệ thống sẽ tự động tính điểm ngay khi bạn nhấn nút nộp bài.</li>
-              <li>Các câu trắc nghiệm nhiều đáp án yêu cầu chọn đúng và đủ tất cả đáp án đúng.</li>
-              <li>Đạt từ {quiz.passing_score_percentage}% trở lên sẽ tự động đánh dấu hoàn thành bài học trên cây tiến độ khóa học.</li>
+              <li>Your answers will be automatically graded as soon as you submit.</li>
+              <li>Multiple-choice questions require selecting all correct answers.</li>
+              <li>Scoring {quiz.passing_score_percentage}% or higher marks the lesson completed.</li>
             </ul>
           </div>
 
@@ -260,7 +260,7 @@ function LessonQuizCardContent({
               size="lg"
               className="gap-2 px-6 font-semibold"
             >
-              <span>Bắt đầu làm bài</span>
+              <span>Start Quiz</span>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -276,13 +276,13 @@ function LessonQuizCardContent({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3.5">
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-                Câu {currentIndex + 1} / {quiz.questions.length}
+                Question {currentIndex + 1} / {quiz.questions.length}
               </span>
               <h3 className="text-sm font-medium text-muted-foreground mt-0.5">
                 {currentQuestion.type === "single_choice"
-                  ? "Chọn 1 đáp án đúng nhất"
-                  : "Chọn nhiều đáp án đúng"}
-                {" "}&bull; {currentQuestion.points} điểm
+                  ? "Select single best answer"
+                  : "Select all that apply"}
+                {" "}&bull; {currentQuestion.points} pts
               </h3>
             </div>
 
@@ -386,11 +386,11 @@ function LessonQuizCardContent({
               className="gap-1 text-xs"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
-              <span>Câu trước</span>
+              <span>Previous</span>
             </Button>
 
             <span className="text-xs text-muted-foreground">
-              Đã làm: <strong className="text-foreground">{answeredCount}</strong> / {quiz.questions.length} câu
+              Answered: <strong className="text-foreground">{answeredCount}</strong> / {quiz.questions.length}
             </span>
 
             {currentIndex < quiz.questions.length - 1 ? (
@@ -399,7 +399,7 @@ function LessonQuizCardContent({
                 onClick={() => setCurrentIndex(currentIndex + 1)}
                 className="gap-1 text-xs"
               >
-                <span>Câu tiếp theo</span>
+                <span>Next</span>
                 <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             ) : (
@@ -409,7 +409,7 @@ function LessonQuizCardContent({
                 disabled={isSubmitting}
                 className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
               >
-                {isSubmitting ? "Đang chấm điểm..." : "Nộp bài kiểm tra"}
+                {isSubmitting ? "Grading..." : "Submit Quiz"}
               </Button>
             )}
           </div>
@@ -445,17 +445,17 @@ function LessonQuizCardContent({
                     : "bg-amber-600 text-white"
                 }`}
               >
-                {latestAttempt.passed ? "Kết quả: ĐẠT (PASSED)" : "Kết quả: CHƯA ĐẠT"}
+                {latestAttempt.passed ? "Result: PASSED" : "Result: NOT PASSED"}
               </span>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
-                {latestAttempt.score} / {latestAttempt.max_score} điểm ({latestAttempt.percentage}%)
+                {latestAttempt.score} / {latestAttempt.max_score} pts ({latestAttempt.percentage}%)
               </h2>
             </div>
 
             <p className="text-xs sm:text-sm max-w-lg mx-auto text-muted-foreground">
               {latestAttempt.passed
-                ? "🎉 Chúc mừng! Bạn đã hoàn thành xuất sắc yêu cầu bài trắc nghiệm. Hệ thống đã tự động ghi nhận và đánh dấu bài học hoàn thành trên lộ trình học!"
-                : `Điểm đạt yêu cầu là ${quiz.passing_score_percentage}%. Bạn hãy đọc kỹ lại giải thích bên dưới và thử lại để hoàn thành bài học nhé.`}
+                ? "🎉 Congratulations! You passed the quiz. The system recorded your completion on your syllabus."
+                : `Required passing score is ${quiz.passing_score_percentage}%. Please review explanations below and try again.`}
             </p>
 
             <div className="flex items-center justify-center gap-3 pt-2">
@@ -466,7 +466,7 @@ function LessonQuizCardContent({
                 className="gap-1.5 text-xs bg-background hover:bg-accent"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
-                <span>Làm lại bài kiểm tra</span>
+                <span>Retake Quiz</span>
               </Button>
             </div>
           </div>
@@ -474,9 +474,9 @@ function LessonQuizCardContent({
           {/* Detailed Question-by-Question Breakdown */}
           <div className="space-y-4">
             <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-              <span>Chi tiết bài làm &amp; Chấm điểm tự động</span>
+              <span>Detailed Automated Feedback</span>
               <span className="text-xs font-normal text-muted-foreground">
-                ({latestAttempt.feedback.filter((f) => f.is_correct).length} / {quiz.questions.length} câu đúng)
+                ({latestAttempt.feedback.filter((f) => f.is_correct).length} / {quiz.questions.length} correct)
               </span>
             </h3>
 
@@ -501,17 +501,17 @@ function LessonQuizCardContent({
                         {isCorrect ? (
                           <div className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
                             <CheckCircle2 className="h-4 w-4" />
-                            <span>Câu {idx + 1}: Đúng</span>
+                            <span>Question {idx + 1}: Correct</span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400">
                             <XCircle className="h-4 w-4" />
-                            <span>Câu {idx + 1}: Chưa chính xác</span>
+                            <span>Question {idx + 1}: Incorrect</span>
                           </div>
                         )}
                       </div>
                       <span className="font-mono text-xs font-semibold text-foreground">
-                        {feedback?.points_earned ?? 0} / {q.points} đ
+                        {feedback?.points_earned ?? 0} / {q.points} pts
                       </span>
                     </div>
 
@@ -549,12 +549,12 @@ function LessonQuizCardContent({
                             <div className="shrink-0 flex items-center gap-1 font-semibold text-[11px]">
                               {isRightAnswer && (
                                 <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                                  <Check className="h-3.5 w-3.5" /> Đáp án đúng
+                                  <Check className="h-3.5 w-3.5" /> Correct answer
                                 </span>
                               )}
                               {isChosen && (
                                 <span className="text-muted-foreground ml-2 text-[10px] font-normal italic">
-                                  (Bạn đã chọn)
+                                  (Selected)
                                 </span>
                               )}
                             </div>
@@ -568,7 +568,7 @@ function LessonQuizCardContent({
                       <div className="ml-6 rounded-md border border-primary/20 bg-primary/5 p-3 text-xs space-y-1">
                         <div className="font-semibold text-primary flex items-center gap-1.5">
                           <Lightbulb className="h-3.5 w-3.5" />
-                          <span>Giải thích từ giảng viên:</span>
+                          <span>Instructor Explanation:</span>
                         </div>
                         <p className="text-muted-foreground pl-5 leading-relaxed">
                           {q.explanation}
@@ -585,7 +585,7 @@ function LessonQuizCardContent({
           {allAttempts.length > 1 && (
             <div className="border-t pt-4 space-y-2">
               <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                Lịch sử các lần làm bài ({allAttempts.length})
+                Attempt History ({allAttempts.length})
               </h4>
               <div className="space-y-1.5">
                 {allAttempts.map((att, i) => (
@@ -594,7 +594,7 @@ function LessonQuizCardContent({
                     className="flex items-center justify-between rounded-md border bg-muted/20 p-2 text-xs"
                   >
                     <span className="font-medium text-foreground">
-                      Lần {allAttempts.length - i}:{" "}
+                      Attempt {allAttempts.length - i}:{" "}
                       <span
                         className={
                           att.passed
@@ -602,12 +602,12 @@ function LessonQuizCardContent({
                             : "text-amber-600 font-bold"
                         }
                       >
-                        {att.score}/{att.max_score} đ ({att.percentage}%) -{" "}
-                        {att.passed ? "Đạt" : "Chưa đạt"}
+                        {att.score}/{att.max_score} pts ({att.percentage}%) -{" "}
+                        {att.passed ? "Passed" : "Failed"}
                       </span>
                     </span>
                     <span className="text-muted-foreground text-[11px]">
-                      {new Date(att.submitted_at).toLocaleDateString("vi-VN", {
+                      {new Date(att.submitted_at).toLocaleDateString("en-US", {
                         hour: "2-digit",
                         minute: "2-digit",
                         day: "2-digit",

@@ -12,7 +12,7 @@ import {
   Clock,
   CheckCircle2,
 } from "lucide-react";
-import { COURSES, fetchCourses } from "@/data/courses";
+import { fetchCourses } from "@/data/courses";
 import { mockDb, CURRENT_USER } from "@/lib/db";
 import { enrollmentsApi } from "@/lib/api";
 import { CourseGrid } from "@/components/course/course-grid";
@@ -25,7 +25,8 @@ type StatusFilter = "all" | CourseStatus;
 type SortOption = "newest" | "title_asc" | "title_desc" | "progress_desc";
 
 export default function CourseCatalogPage() {
-  const [courses, setCourses] = useState<Course[]>(COURSES);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [instructorFilter, setInstructorFilter] = useState<string>("all");
@@ -43,11 +44,14 @@ export default function CourseCatalogPage() {
 
   // Load courses dynamically from M2 Backend API
   useEffect(() => {
-    fetchCourses().then((data) => {
-      if (data && data.length > 0) {
-        setCourses(data);
-      }
-    });
+    fetchCourses()
+      .then((data) => {
+        setCourses(data || []);
+      })
+      .catch(() => {})
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
   // Extract unique instructors and categories
@@ -207,7 +211,7 @@ export default function CourseCatalogPage() {
 
     const target = courses.find((c) => c.id === courseId);
     if (target) {
-      setNotification(`Đăng ký thành công khóa học "${target.title}".`);
+      setNotification(`Successfully enrolled in "${target.title}".`);
       setTimeout(() => setNotification(null), 4000);
     }
   };
@@ -237,7 +241,7 @@ export default function CourseCatalogPage() {
       const title = leavingCourse.title;
       setLeavingCourse(null);
       setIsLeaving(false);
-      setNotification(`Bạn đã rời khỏi khóa học "${title}" thành công.`);
+      setNotification(`Successfully left course "${title}".`);
       setTimeout(() => setNotification(null), 4000);
     }, 300);
   };
@@ -548,7 +552,26 @@ export default function CourseCatalogPage() {
       </div>
 
       {/* Courses Grid or Empty State */}
-      {paginatedCourses.length === 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className="h-64 rounded-2xl border border-border/60 bg-card/60 animate-pulse p-6 flex flex-col justify-between"
+            >
+              <div className="space-y-3">
+                <div className="h-5 bg-muted rounded-md w-3/4" />
+                <div className="h-4 bg-muted/60 rounded-md w-1/3" />
+                <div className="space-y-2 pt-2">
+                  <div className="h-3 bg-muted/40 rounded-md w-full" />
+                  <div className="h-3 bg-muted/40 rounded-md w-4/5" />
+                </div>
+              </div>
+              <div className="h-9 bg-muted/50 rounded-xl w-full" />
+            </div>
+          ))}
+        </div>
+      ) : paginatedCourses.length === 0 ? (
         <div className="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/40 p-8 text-center">
           <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-3">
             <Search className="size-6" />

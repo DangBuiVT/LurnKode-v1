@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import {
   Search,
   Plus,
@@ -20,11 +22,27 @@ import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { StudioCourse, StudioCourseStatus } from "@/types/studio";
 import { Course } from "@/lib/db/schema";
+import { coursesApi } from "@/lib/api";
 
 type StatusFilter = "all" | StudioCourseStatus;
 type SortOption = "updated_desc" | "enrolled_desc" | "enrolled_asc" | "title_asc" | "title_desc";
 
 export default function StudioCoursesPage() {
+  const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
+
+  // Role-based authorization: Only Instructor and Admin may access Creator Studio
+  useEffect(() => {
+    if (isAuthLoading) return;
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+    if (user.role === "Learner") {
+      router.replace("/course/catalog");
+    }
+  }, [user, isAuthLoading, router]);
+
   const [courses, setCourses] = useState<StudioCourse[]>(STUDIO_COURSES);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -39,6 +57,28 @@ export default function StudioCoursesPage() {
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
+
+  // Load live courses from backend API
+  useEffect(() => {
+    coursesApi
+      .listPublished({ limit: 100 })
+      .then((backendCourses) => {
+        if (backendCourses && backendCourses.length > 0) {
+          const liveStudioCourses: StudioCourse[] = backendCourses.map((c) => ({
+            id: c.id,
+            title: c.title,
+            description: c.description || "",
+            status: (c.status === "published" ? "Published" : "Draft") as StudioCourseStatus,
+            enrolledCount: 0,
+            updatedAt: "Just now",
+            category: "Software Engineering",
+            createdAt: c.createdAt,
+          }));
+          setCourses(liveStudioCourses);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Extract unique categories
   const categories = useMemo(() => {
@@ -170,8 +210,28 @@ export default function StudioCoursesPage() {
   };
 
   const handleSavedCourse = (savedCourse: Course) => {
-    const updated = getStudioCourses();
-    setCourses(updated);
+    coursesApi
+      .listPublished({ limit: 100 })
+      .then((backendCourses) => {
+        if (backendCourses && backendCourses.length > 0) {
+          const liveStudioCourses: StudioCourse[] = backendCourses.map((c) => ({
+            id: c.id,
+            title: c.title,
+            description: c.description || "",
+            status: (c.status === "published" ? "Published" : "Draft") as StudioCourseStatus,
+            enrolledCount: 0,
+            updatedAt: "Just now",
+            category: "Software Engineering",
+            createdAt: c.createdAt,
+          }));
+          setCourses(liveStudioCourses);
+        }
+      })
+      .catch(() => {
+        const updated = getStudioCourses();
+        setCourses(updated);
+      });
+
     setNotification(
       `Course "${savedCourse.title}" has been successfully ${
         savedCourse.status === "published" ? "published" : "saved as draft"

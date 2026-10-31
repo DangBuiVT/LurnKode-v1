@@ -2,21 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { LessonContentCard } from "@/components/learn/lesson-content-card";
-import { LessonSubmissionCard } from "@/components/learn/lesson-submission-card";
+// import { LessonSubmissionCard } from "@/components/learn/lesson-submission-card";
 import { LessonQuizCard } from "@/components/learn/lesson-quiz-card";
 import { LessonSwitcher } from "@/components/learn/lesson-switcher";
 import { mockDb } from "@/lib/db/mock-db";
 import { CURRENT_USER } from "@/lib/db/mock-data";
 import { enrollmentsApi } from "@/lib/api";
 import { Course, Lesson, User, Material } from "@/lib/db/schema";
-import { Award, FileEdit } from "lucide-react";
+// import { Award, FileEdit } from "lucide-react";
 
 interface LearningViewProps {
   course: Course;
-  lesson: Lesson;
+  lesson: Lesson & { displayIndex?: string };
   instructor: User;
   materials: Material[];
-  allLessons: Lesson[];
+  allLessons: Array<Lesson & { displayIndex?: string }>;
   initialIsCompleted: boolean;
 }
 
@@ -29,12 +29,41 @@ export function LearningView({
   initialIsCompleted,
 }: LearningViewProps) {
   const [isCompleted, setIsCompleted] = useState(initialIsCompleted);
-  const [assessmentTab, setAssessmentTab] = useState<"quiz" | "manual">("quiz");
+  // const [assessmentTab, setAssessmentTab] = useState<"quiz" | "manual">("quiz");
+  const [fetchedMaterials, setFetchedMaterials] = useState<Material[]>([]);
 
-  // Auto-record last accessed lesson for Approach 1 (Smart Auto-Resume)
+  // Auto-record last accessed lesson for Smart Auto-Resume & fetch materials
   useEffect(() => {
     mockDb.touchLessonAccess(CURRENT_USER.id, course.id, lesson.id);
-  }, [course.id, lesson.id]);
+
+    if (materials.length === 0) {
+      let isMounted = true;
+      enrollmentsApi
+        .accessLesson(lesson.id)
+        .then((raw) => {
+          if (isMounted && raw && raw.length > 0) {
+            setFetchedMaterials(
+              raw.map((m) => ({
+                id: m.id,
+                lesson_id: m.lessonId,
+                title: m.title,
+                type: m.type as Material["type"],
+                content: m.textContent || "",
+                is_rag_source: m.isRagSource,
+                created_at: m.createdAt,
+              }))
+            );
+          }
+        })
+        .catch(() => {});
+
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [course.id, lesson.id, materials.length]);
+
+  const activeMaterials = materials.length > 0 ? materials : fetchedMaterials;
 
   const handleToggleComplete = async () => {
     try {
@@ -46,11 +75,11 @@ export function LearningView({
     }
   };
 
-  const cleanCourseId = course.id.replace("c-", "");
-  const lessonOrderIndex = `1.${lesson.order_index}`;
+  const cleanCourseId = course.id;
+  const lessonOrderIndex = lesson.displayIndex || String(lesson.order_index);
 
   // Find document/theory material if available
-  const docMaterial = materials.find((m) => m.type === "markdown");
+  const docMaterial = activeMaterials.find((m) => m.type === "markdown");
   const materialContent = docMaterial?.content || undefined;
 
   return (
@@ -60,10 +89,11 @@ export function LearningView({
         courseId={cleanCourseId}
         courseTitle={course.title}
         currentLessonId={lesson.id}
-        allLessons={allLessons.map((l) => ({
+        allLessons={allLessons.map((l, idx) => ({
           id: l.id,
-          title: `1.${l.order_index} ${l.title}`,
-          order_index: l.order_index,
+          title: l.title,
+          order_index: l.order_index || idx + 1,
+          displayIndex: l.displayIndex,
           is_locked: false,
         }))}
       />
@@ -80,9 +110,21 @@ export function LearningView({
           markdownContent={materialContent}
         />
 
-        {/* Right Column: Assessment Workspace (Quiz vs Manual Submission) */}
+        {/* Right Column: Assessment Workspace (Quiz) */}
         <div className="space-y-4">
-          {/* Assessment Mode Switcher Tabs */}
+          {/* Active Assessment Panel */}
+          <LessonQuizCard
+            courseId={course.id}
+            lessonId={lesson.id}
+            lessonTitle={lesson.title}
+            onQuizCompleted={(passed) => {
+              if (passed) {
+                setIsCompleted(true);
+              }
+            }}
+          />
+
+          {/* Temporarily commented out manual submission & mode switcher
           <div className="flex items-center gap-1 p-1 rounded-xl border bg-muted/40 text-xs font-semibold">
             <button
               onClick={() => setAssessmentTab("quiz")}
@@ -93,7 +135,7 @@ export function LearningView({
               }`}
             >
               <Award className="h-4 w-4 text-primary" />
-              <span>Trắc nghiệm chấm tự động</span>
+              <span>Auto-graded Quiz</span>
             </button>
 
             <button
@@ -105,25 +147,16 @@ export function LearningView({
               }`}
             >
               <FileEdit className="h-4 w-4 text-primary" />
-              <span>Bài tập nộp tệp / text</span>
+              <span>Assignment Submission</span>
             </button>
           </div>
 
-          {/* Active Assessment Panel */}
           {assessmentTab === "quiz" ? (
-            <LessonQuizCard
-              courseId={course.id}
-              lessonId={lesson.id}
-              lessonTitle={lesson.title}
-              onQuizCompleted={(passed) => {
-                if (passed) {
-                  setIsCompleted(true);
-                }
-              }}
-            />
+            <LessonQuizCard ... />
           ) : (
             <LessonSubmissionCard lessonTitle={lesson.title} />
           )}
+          */}
         </div>
       </div>
     </div>

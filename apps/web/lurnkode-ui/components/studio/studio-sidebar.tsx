@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Folder, ClipboardList, Inbox } from "lucide-react";
+import { Folder, ClipboardList } from "lucide-react";
 import { cn } from "cn";
 
 interface NavItem {
@@ -14,7 +14,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: "Courses", href: "/studio/courses", icon: Folder },
   { name: "Assignments", href: "/studio/assignments", icon: ClipboardList },
-  { name: "Submissions", href: "/studio/submissions", icon: Inbox },
+  // Temporarily commented out Submissions nav item
+  // { name: "Submissions", href: "/studio/submissions", icon: Inbox },
 ];
 
 export function StudioSidebar() {

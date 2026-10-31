@@ -9,18 +9,20 @@ interface LessonSwitcherProps {
   courseId: string;
   courseTitle: string;
   currentLessonId: string;
-  allLessons?: Array<{ id: string; title: string; order_index: number; is_locked?: boolean }>;
+  allLessons?: Array<{
+    id: string;
+    title: string;
+    order_index: number;
+    displayIndex?: string;
+    is_locked?: boolean;
+  }>;
 }
 
 export function LessonSwitcher({
   courseId,
   courseTitle,
   currentLessonId,
-  allLessons = [
-    { id: "les-dsa-1-1", title: "1.1 Array Traversal and Insertion", order_index: 1 },
-    { id: "les-dsa-1-2", title: "1.2 Search on Sorted Arrays", order_index: 2 },
-    { id: "les-dsa-1-3", title: "1.3 Divide and Conquer Basics", order_index: 3, is_locked: true },
-  ],
+  allLessons = [],
 }: LessonSwitcherProps) {
   const currentIndex = allLessons.findIndex((l) => l.id === currentLessonId);
   const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
@@ -38,21 +40,23 @@ export function LessonSwitcher({
         </span>
         <span className="text-muted-foreground hidden sm:inline">|</span>
         <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto">
-          {allLessons.map((les) => {
+          {allLessons.map((les, index) => {
             const isActive = les.id === currentLessonId;
+            const displayNumber = les.displayIndex || les.order_index || index + 1;
             return (
               <Link
                 key={les.id}
                 href={`/learn/${courseId}/${les.id}`}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                title={les.title}
+                className={`min-w-8 px-2.5 py-1 text-center rounded-md text-xs font-semibold transition-colors ${
                   isActive
-                    ? "bg-primary text-primary-foreground font-semibold"
+                    ? "bg-primary text-primary-foreground font-bold shadow-xs"
                     : les.is_locked
                     ? "text-muted-foreground opacity-50 cursor-not-allowed pointer-events-none"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 }`}
               >
-                {les.title.split(" ")[0]}
+                {displayNumber}
               </Link>
             );
           })}
@@ -66,7 +70,7 @@ export function LessonSwitcher({
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8 gap-1 text-xs")}
           >
             <ChevronLeft className="h-3.5 w-3.5" />
-            <span>Bài trước</span>
+            <span>Previous</span>
           </Link>
         ) : (
           <button
@@ -74,7 +78,7 @@ export function LessonSwitcher({
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8 gap-1 text-xs opacity-50 cursor-not-allowed")}
           >
             <ChevronLeft className="h-3.5 w-3.5" />
-            <span>Bài trước</span>
+            <span>Previous</span>
           </button>
         )}
 
@@ -83,7 +87,7 @@ export function LessonSwitcher({
           className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-8 gap-1 text-xs text-muted-foreground hover:text-foreground")}
         >
           <BookOpen className="h-3.5 w-3.5" />
-          <span>Mục lục</span>
+          <span>Syllabus</span>
         </Link>
 
         {nextLesson && !nextLesson.is_locked ? (
@@ -91,7 +95,7 @@ export function LessonSwitcher({
             href={`/learn/${courseId}/${nextLesson.id}`}
             className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-8 gap-1 text-xs")}
           >
-            <span>Bài tiếp</span>
+            <span>Next</span>
             <ChevronRight className="h-3.5 w-3.5" />
           </Link>
         ) : (
@@ -99,7 +103,7 @@ export function LessonSwitcher({
             disabled
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8 gap-1 text-xs opacity-50 cursor-not-allowed")}
           >
-            <span>Bài tiếp</span>
+            <span>Next</span>
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
         )}

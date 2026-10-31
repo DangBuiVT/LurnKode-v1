@@ -264,15 +264,7 @@ export function QuizManagerView({ course, hierarchy }: QuizManagerViewProps) {
                         <span>Chỉnh sửa</span>
                       </Button>
 
-                      <Button
-                        variant="outline"
-                        size="xs"
-                        onClick={() => setSubmissionsQuiz(quiz)}
-                        className="gap-1 text-xs"
-                      >
-                        <Users className="h-3 w-3" />
-                        <span>Sổ điểm ({stats.totalSubmissions})</span>
-                      </Button>
+                      {/* Temporarily commented out Submissions button */}
 
                       <Button
                         variant="ghost"

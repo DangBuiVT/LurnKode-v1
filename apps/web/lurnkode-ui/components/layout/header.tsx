@@ -5,16 +5,22 @@ import { usePathname } from "next/navigation";
 import {
   Bell,
   Sparkles,
-  ChevronDown,
-  User,
   ChevronRight,
   GraduationCap,
+  FolderGit2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "./user-menu";
 import { getCourseByIdOrSlug } from "@/data/courses";
+import { useAuth } from "@/lib/auth-context";
 
 export function Header() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const isInstructorOrAdmin =
+    user && (user.role === "Instructor" || user.role === "Admin");
+  const homeHref = isInstructorOrAdmin ? "/studio/courses" : "/course/catalog";
 
   // Dynamic breadcrumb generation without "Dashboard"
   const renderBreadcrumb = () => {
@@ -37,7 +43,11 @@ export function Header() {
               l.id.endsWith(lessonId)
           );
           if (found) {
-            lessonTitle = `${found.orderIndex} ${found.title}`;
+            const clean = found.title
+              .replace(/^bài\s*\d+[:.\s-]*/i, "")
+              .replace(/^lesson\s*\d+[:.\s-]*/i, "")
+              .trim();
+            lessonTitle = `${found.orderIndex} ${clean}`;
             break;
           }
         }
@@ -118,7 +128,7 @@ export function Header() {
       <div className="flex items-center gap-6">
         {/* Brand Logo with Cap Icon */}
         <Link
-          href="/course/catalog"
+          href={homeHref}
           className="flex items-center gap-2 text-xl font-bold tracking-tight text-primary transition-opacity hover:opacity-90"
         >
           <GraduationCap className="size-5.5 text-primary" />
@@ -143,6 +153,20 @@ export function Header() {
           <span className="sr-only">Notifications</span>
         </button>
 
+        {/* Creator Studio Shortcut for Instructors/Admins */}
+        {isInstructorOrAdmin && (
+          <Link href="/studio/courses">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 rounded-lg border-purple-300 bg-purple-50 px-3 font-semibold text-purple-700 hover:bg-purple-100 hover:text-purple-800 dark:border-purple-800 dark:bg-purple-950/60 dark:text-purple-300"
+            >
+              <FolderGit2 className="size-3.5 text-purple-600 dark:text-purple-400" />
+              <span>Studio</span>
+            </Button>
+          </Link>
+        )}
+
         {/* AI Tutor Button with Purple & Amber Accent */}
         <Button
           variant="outline"
@@ -153,17 +177,8 @@ export function Header() {
           <span>AI Tutor</span>
         </Button>
 
-        {/* User Dropdown */}
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-lg py-1.5 pl-2 pr-2.5 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <div className="flex size-7 items-center justify-center rounded-full bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-            <User className="size-4" />
-          </div>
-          <span className="text-foreground">John</span>
-          <ChevronDown className="size-3.5 text-muted-foreground" />
-        </button>
+        {/* User Account & Dropdown */}
+        <UserMenu />
       </div>
     </header>
   );

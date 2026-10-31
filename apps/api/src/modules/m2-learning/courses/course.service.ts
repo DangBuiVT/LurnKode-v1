@@ -84,32 +84,43 @@ export const CourseService = {
   },
 
   async listPublishedCourses(page = 1, limit = 20, search?: string) {
-    // TODO:
-    // 1. Tạo điều kiện lọc: courses.status = 'published' VÀ (nếu có search thì ilike(courses.title, `%${search}%`))
-    // 2. Đếm tổng số bản ghi (total) thỏa điều kiện
-    // 3. Truy vấn danh sách với .limit(limit).offset((page - 1) * limit)
-    // 4. Return { items, total, page, limit }
-    const where = and(eq(courses.status, 'published'), search? ilike(courses.title, `%${search}%`) : undefined);
-    const [row] = await db.select({total: count()}).from(courses).where(where);
+    const where = and(eq(courses.status, 'published'), search ? ilike(courses.title, `%${search}%`) : undefined);
+    const [row] = await db.select({ total: count() }).from(courses).where(where);
     const total = Number(row?.total ?? 0);
-    const items = await db.select().from(courses).where(where).limit(limit).offset((page - 1) * limit);
-    return {items, total, page, limit};
+    const items = await db
+      .select({
+        id: courses.id,
+        instructorId: courses.instructorId,
+        title: courses.title,
+        description: courses.description,
+        status: courses.status,
+        createdAt: courses.createdAt,
+        instructorName: users.fullName,
+        instructorEmail: users.email,
+      })
+      .from(courses)
+      .leftJoin(users, eq(courses.instructorId, users.id))
+      .where(where)
+      .limit(limit)
+      .offset((page - 1) * limit);
+    return { items, total, page, limit };
   },
 
   async getCourseDetails(courseId: string) {
-    // TODO:
-    // 1. Dùng db.query.courses.findFirst({
-    //      where: eq(courses.id, courseId),
-    //      with: { chapters: { orderBy: asc(chapters.orderIndex), with: { lessons: { orderBy: asc(lessons.orderIndex) } } } }
-    //    })
-    // 2. Nếu không tìm thấy -> throw Errors.NotFound('Course')
-    // 3. Return kết quả
     const details = await db.query.courses.findFirst({
       where: eq(courses.id, courseId),
       with: { chapters: { orderBy: asc(chapters.orderIndex), with: { lessons: { orderBy: asc(lessons.orderIndex) } } } }
     });
     if (!details) throw Errors.NotFound('Course');
-    return details;
+    const [instUser] = await db
+      .select({ fullName: users.fullName, email: users.email })
+      .from(users)
+      .where(eq(users.id, details.instructorId));
+    return {
+      ...details,
+      instructorName: instUser?.fullName || 'Instructor',
+      instructorEmail: instUser?.email,
+    };
   },
 
   async updateCourse(

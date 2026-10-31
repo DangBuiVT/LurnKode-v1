@@ -69,6 +69,18 @@ export function LessonContentCard({
     0
   );
 
+  const displayTitle = () => {
+    const trimmed = lessonTitle.trim();
+    if (trimmed.startsWith(lessonIndex)) {
+      return trimmed;
+    }
+    const clean = trimmed
+      .replace(/^bài\s*\d+[:.\s-]*/i, "")
+      .replace(/^lesson\s*\d+[:.\s-]*/i, "")
+      .trim();
+    return `${lessonIndex} ${clean}`;
+  };
+
   const handleAddComment = () => {
     if (!commentText.trim()) return;
     const newComment: Comment = {
@@ -115,7 +127,7 @@ export function LessonContentCard({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-            {lessonIndex} {lessonTitle}
+            {displayTitle()}
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             Instructor: <span className="font-medium text-foreground">{instructorName}</span>
@@ -158,52 +170,19 @@ export function LessonContentCard({
       {/* Reading Document Container */}
       <div className="rounded-lg border bg-background/50 p-4 max-h-[360px] overflow-y-auto space-y-3 text-sm leading-relaxed scrollbar-thin">
         {markdownContent ? (
-          <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-line">
+          <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-line text-foreground/90">
             {markdownContent}
           </div>
         ) : (
-          <>
-            <div>
-              <h2 className="text-base font-semibold text-foreground mb-1">
-                ## Introduction to Search
-              </h2>
-              <p className="text-muted-foreground">
-                Given a sorted array of integers... write a search function with O(log N)
-                complexity.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-foreground mb-1">### Concept</h3>
-              <p className="text-muted-foreground">
-                The search algorithm partitions the dataset, on search algorithms for the course that
-                is selecting the function on bmo-search results. By repeatedly halving the search space,
-                binary search achieves logarithmic efficiency.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-foreground mb-1">### Constraints</h3>
-              <p className="text-muted-foreground">
-                Học viên đọc tài liệu và thảo luận bên dưới. Chú ý các trường hợp biên như mảng rỗng,
-                mảng chỉ có 1 phần tử hoặc mảng chứa nhiều giá trị trùng lặp.
-              </p>
-            </div>
-
-            <div className="rounded-md bg-muted p-3 font-mono text-xs text-foreground overflow-x-auto">
-              <code>{`def binary_search(arr, target):
-    left, right = 0, len(arr) - 1
-    while left <= right:
-        mid = (left + right) // 2
-        if arr[mid] == target:
-            return mid
-        elif arr[mid] < target:
-            left = mid + 1
-        else:
-            right = mid - 1
-    return -1`}</code>
-            </div>
-          </>
+          <div className="py-8 text-center space-y-2">
+            <BookOpen className="h-8 w-8 mx-auto text-muted-foreground/60" />
+            <h3 className="text-sm font-semibold text-foreground">
+              {lessonTitle}
+            </h3>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto">
+              Lesson document content is being prepared by the instructor or integrated with video/slides. Feel free to ask questions in the discussion tab or take the quiz on the side.
+            </p>
+          </div>
         )}
       </div>
 
@@ -236,7 +215,7 @@ export function LessonContentCard({
       {/* Tab Panels */}
       {activeTab === "content" ? (
         <div className="text-xs text-muted-foreground italic py-1">
-          Đang xem nội dung lý thuyết bài học. Chọn tab &quot;Discussion&quot; để trao đổi cùng giảng viên và bạn học.
+          Viewing lesson theoretical concepts. Switch to the &quot;Discussion&quot; tab to interact with your instructor and peers.
         </div>
       ) : (
         <div className="space-y-4 pt-1">

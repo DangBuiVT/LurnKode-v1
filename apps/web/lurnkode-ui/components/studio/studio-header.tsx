@@ -4,12 +4,11 @@ import Link from "next/link";
 import {
   Bell,
   Sparkles,
-  ChevronDown,
-  User,
   ChevronRight,
   GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/layout/user-menu";
 
 export function StudioHeader() {
   return (
@@ -61,17 +60,8 @@ export function StudioHeader() {
           <span>AI Tutor</span>
         </Button>
 
-        {/* User Dropdown */}
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-lg py-1.5 pl-2 pr-2.5 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <div className="flex size-7 items-center justify-center rounded-full bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-            <User className="size-4" />
-          </div>
-          <span className="text-foreground">John</span>
-          <ChevronDown className="size-3.5 text-muted-foreground" />
-        </button>
+        {/* User Account & Dropdown */}
+        <UserMenu />
       </div>
     </header>
   );

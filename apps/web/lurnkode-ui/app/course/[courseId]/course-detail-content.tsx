@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChapterSection } from "@/components/course/chapter-section";
 import { LeaveCourseDialog } from "@/components/course/leave-course-dialog";
-import { CourseDetail, Lesson } from "@/types/course";
+import { CourseDetail, Chapter, Lesson } from "@/types/course";
 import { Button } from "@/components/ui/button";
 import { mockDb } from "@/lib/db/mock-db";
 import { CURRENT_USER } from "@/lib/db/mock-data";
-import { enrollmentsApi } from "@/lib/api";
-import { PlayCircle, BookOpen, LogOut, CheckCircle2, X } from "lucide-react";
+import { coursesApi, enrollmentsApi, adaptBackendCourseDetail } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
+import { PlayCircle, BookOpen, LogOut, CheckCircle2, X, Loader2 } from "lucide-react";
 
 interface CourseDetailContentProps {
   course: CourseDetail;
@@ -17,16 +18,22 @@ interface CourseDetailContentProps {
 
 export function CourseDetailContent({ course }: CourseDetailContentProps) {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
 
-  // Enrollment state
-  const [isEnrolled, setIsEnrolled] = useState<boolean>(() => {
-    const existing = mockDb.getEnrollment(CURRENT_USER.id, course.id);
-    return Boolean(existing);
+  const isInstructorOrAdmin =
+    user && (user.role === "Instructor" || user.role === "Admin");
+
+  // Enrollment state & chapters initialized from server props
+  const [isEnrolledState, setIsEnrolledState] = useState<boolean>(() => {
+    return course.status !== "not_enrolled";
   });
+  const isEnrolled = Boolean(isInstructorOrAdmin || isEnrolledState);
+
   const [progress, setProgress] = useState<number>(() => {
-    const existing = mockDb.getEnrollment(CURRENT_USER.id, course.id);
-    return existing ? course.overallProgress : 0;
+    return course.overallProgress || 0;
   });
+  const [chapters, setChapters] = useState<Chapter[]>(course.chapters);
+  const [isLoadingEnrollment, setIsLoadingEnrollment] = useState(false);
 
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -34,43 +41,172 @@ export function CourseDetailContent({ course }: CourseDetailContentProps) {
 
   // Active lesson
   const firstAvailableLessonId =
-    course.chapters[0]?.lessons.find((l) => l.status !== "locked")?.id ||
-    course.chapters[0]?.lessons[0]?.id;
+    chapters[0]?.lessons.find((l) => l.status !== "locked")?.id ||
+    chapters[0]?.lessons[0]?.id;
 
   const [activeLesson, setActiveLesson] = useState<string | undefined>(
     firstAvailableLessonId
   );
 
+  // Synchronize client-side enrollment with backend token
+  useEffect(() => {
+    let isMounted = true;
+
+    void Promise.resolve().then(async () => {
+      if (!isAuthenticated || !user) {
+        return;
+      }
+
+      // Instructors & Admins: Fetch live chapters unlocked for preview
+      if (user.role === "Instructor" || user.role === "Admin") {
+        try {
+          const rawDetail = await coursesApi.getById(course.id);
+          if (isMounted && rawDetail) {
+            const unlockedChapters: Chapter[] = rawDetail.chapters.map((ch) => ({
+              id: ch.id,
+              chapterNumber: ch.orderIndex,
+              title: ch.title,
+              createdAt: new Date(ch.createdAt).toLocaleDateString("en-US"),
+              isLocked: false,
+              lessons: ch.lessons.map((l) => ({
+                id: l.id,
+                orderIndex: `${ch.orderIndex}.${l.orderIndex}`,
+                lessonNumber: l.orderIndex,
+                title: l.title,
+                materials: ["markdown"],
+                status: "in_progress",
+                duration: "20 min",
+              })),
+            }));
+            setChapters(unlockedChapters);
+          }
+        } catch {
+          // Fallback to static
+        }
+        return;
+      }
+
+      // Learner: Check enrolled courses
+      try {
+        const [enrollments, rawDetail] = await Promise.all([
+          enrollmentsApi.getMyEnrollments(),
+          coursesApi.getById(course.id).catch(() => null),
+        ]);
+
+        if (!isMounted) return;
+
+        const myEnrollment = enrollments.find(
+          (e) => e.courseId === course.id || e.courseId === course.id.replace("c-", "")
+        );
+
+        if (myEnrollment) {
+          setIsEnrolledState(true);
+          if (rawDetail) {
+            const adapted = adaptBackendCourseDetail(rawDetail, myEnrollment);
+            setChapters(adapted.chapters);
+            setProgress(adapted.overallProgress);
+            const firstUnlocked =
+              adapted.chapters[0]?.lessons.find((l) => l.status !== "locked")?.id ||
+              adapted.chapters[0]?.lessons[0]?.id;
+            setActiveLesson(firstUnlocked);
+          } else {
+            setProgress(0);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to query live enrollment status", err);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [course.id, isAuthenticated, user]);
+
   const handleSelectLesson = (lesson: Lesson) => {
-    if (!isEnrolled) {
-      // Auto-enroll if clicking on first lesson or prompt
-      handleEnroll();
+    if (!isAuthenticated) {
+      router.push(`/login?redirect=/course/${course.id}`);
+      return;
     }
+
+    if (!isEnrolled) {
+      handleEnroll();
+      return;
+    }
+
+    if (lesson.status === "locked" && user?.role === "Learner") {
+      setNotification("This lesson is locked. Complete earlier lessons to unlock.");
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+
     setActiveLesson(lesson.id);
     router.push(`/learn/${course.id}/${lesson.id}`);
   };
 
   const handleEnroll = async () => {
-    try {
-      await enrollmentsApi.enroll(course.id);
-    } catch {
-      mockDb.enrollCourse(CURRENT_USER.id, course.id);
+    if (!isAuthenticated) {
+      router.push(`/login?redirect=/course/${course.id}`);
+      return;
     }
-    setIsEnrolled(true);
-    setProgress(course.overallProgress || 0);
-    setNotification("Đăng ký tham gia khóa học thành công! Chúc bạn học tốt.");
-    setTimeout(() => setNotification(null), 4000);
+
+    if (user?.role === "Instructor") {
+      setNotification("Instructors cannot enroll as learners. You can manage this course in Creator Studio.");
+      setTimeout(() => setNotification(null), 4000);
+      return;
+    }
+
+    try {
+      setIsLoadingEnrollment(true);
+      await enrollmentsApi.enroll(course.id);
+      setIsEnrolledState(true);
+      setNotification("Successfully enrolled in this course! Happy learning.");
+
+      // Refresh detail and unlock lessons
+      const [enrollments, rawDetail] = await Promise.all([
+        enrollmentsApi.getMyEnrollments(),
+        coursesApi.getById(course.id).catch(() => null),
+      ]);
+      const myEnrollment = enrollments.find(
+        (e) => e.courseId === course.id || e.courseId === course.id.replace("c-", "")
+      );
+      if (rawDetail && myEnrollment) {
+        const adapted = adaptBackendCourseDetail(rawDetail, myEnrollment);
+        setChapters(adapted.chapters);
+        setProgress(adapted.overallProgress);
+      }
+    } catch (err: unknown) {
+      const errorMsg = (err as Error)?.message || "";
+      if (errorMsg.includes("already enrolled") || errorMsg.includes("409")) {
+        setIsEnrolledState(true);
+        setNotification("You are already enrolled in this course.");
+      } else {
+        mockDb.enrollCourse(CURRENT_USER.id, course.id);
+        setIsEnrolledState(true);
+        setNotification("Successfully enrolled in this course! Happy learning.");
+      }
+    } finally {
+      setIsLoadingEnrollment(false);
+      setTimeout(() => setNotification(null), 4000);
+    }
   };
 
   const handleConfirmLeave = () => {
     setIsLeaving(true);
     setTimeout(() => {
       mockDb.unenrollCourse(CURRENT_USER.id, course.id);
-      setIsEnrolled(false);
+      setIsEnrolledState(false);
       setProgress(0);
+      setChapters((prev) =>
+        prev.map((ch, idx) => ({
+          ...ch,
+          isLocked: idx > 0,
+          lessons: ch.lessons.map((l) => ({ ...l, status: "locked" })),
+        }))
+      );
       setIsLeaveDialogOpen(false);
       setIsLeaving(false);
-      setNotification(`Bạn đã rời khỏi khóa học "${course.title}". Bạn có thể đăng ký lại bất kỳ lúc nào.`);
+      setNotification(`You have left "${course.title}". You can re-enroll at any time.`);
       setTimeout(() => setNotification(null), 4000);
     }, 300);
   };
@@ -118,16 +254,18 @@ export function CourseDetailContent({ course }: CourseDetailContentProps) {
           <div className="flex items-center gap-2 shrink-0">
             {isEnrolled ? (
               <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsLeaveDialogOpen(true)}
-                  className="gap-1.5 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive border-border transition-colors"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                  <span>Rời khóa học</span>
-                </Button>
+                {user?.role === "Learner" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsLeaveDialogOpen(true)}
+                    className="gap-1.5 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive border-border transition-colors"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    <span>Leave Course</span>
+                  </Button>
+                )}
 
                 <Button
                   type="button"
@@ -136,18 +274,23 @@ export function CourseDetailContent({ course }: CourseDetailContentProps) {
                   className="gap-1.5 text-xs font-semibold shadow-xs"
                 >
                   <PlayCircle className="h-4 w-4" />
-                  <span>Tiếp tục học</span>
+                  <span>Continue Learning</span>
                 </Button>
               </>
             ) : (
               <Button
                 type="button"
                 size="sm"
+                disabled={isLoadingEnrollment}
                 onClick={handleEnroll}
                 className="gap-1.5 text-xs font-semibold shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                <BookOpen className="h-4 w-4" />
-                <span>Đăng ký khóa học</span>
+                {isLoadingEnrollment ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <BookOpen className="h-4 w-4" />
+                )}
+                <span>Enroll Now</span>
               </Button>
             )}
           </div>
@@ -181,7 +324,7 @@ export function CourseDetailContent({ course }: CourseDetailContentProps) {
 
       {/* Chapters & Lessons List */}
       <section className="flex flex-col gap-5">
-        {course.chapters.map((chapter) => (
+        {chapters.map((chapter) => (
           <ChapterSection
             key={chapter.id}
             chapter={chapter}

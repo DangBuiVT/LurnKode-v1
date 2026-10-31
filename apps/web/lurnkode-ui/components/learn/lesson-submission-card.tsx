@@ -68,7 +68,7 @@ export function LessonSubmissionCard({
 
   const handleSubmit = () => {
     if (!selectedFile && !textAnswer.trim()) {
-      alert("Vui lòng tải lên file bài làm hoặc nhập câu trả lời dạng văn bản trước khi nộp.");
+      alert("Please upload a file or type a text answer before submitting.");
       return;
     }
 
@@ -122,7 +122,7 @@ export function LessonSubmissionCard({
             Write your search function in Python/C++ and attach your file.
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            <span className="font-semibold text-foreground">Hạn nộp (Due):</span> {dueDate}
+            <span className="font-semibold text-foreground">Due:</span> {dueDate}
           </p>
         </div>
 
@@ -241,7 +241,7 @@ export function LessonSubmissionCard({
                 </span>
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                   <Clock className="h-3 w-3" />
-                  <span>Nộp ngày {att.submittedAt}</span>
+                  <span>Submitted on {att.submittedAt}</span>
                 </div>
               </div>
 

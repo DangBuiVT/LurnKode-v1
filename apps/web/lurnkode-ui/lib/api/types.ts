@@ -74,6 +74,13 @@ export interface BackendCourse {
   description: string | null;
   status: CourseStatus;
   createdAt: string;
+  instructorName?: string | null;
+  instructor?: {
+    id: string;
+    fullName: string;
+    email?: string;
+    avatarUrl?: string | null;
+  } | null;
 }
 
 export interface BackendMaterial {

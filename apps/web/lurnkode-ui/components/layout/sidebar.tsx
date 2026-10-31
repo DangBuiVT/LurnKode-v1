@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Folder, BookOpen, BarChart2 } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Folder, BookOpen } from "lucide-react";
 import { cn } from "cn";
+import { useAuth } from "@/lib/auth-context";
 
 interface NavItem {
   name: string;
@@ -14,11 +15,37 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: "Course", href: "/course/catalog", icon: Folder },
   { name: "Learn", href: "/learn", icon: BookOpen },
-  { name: "Progress", href: "/progress", icon: BarChart2 },
+  // Temporarily commented out Progress nav item
+  // { name: "Progress", href: "/progress", icon: BarChart2 },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, item: NavItem) => {
+    if (item.name === "Learn") {
+      e.preventDefault();
+
+      if (!isAuthenticated) {
+        router.push("/login?redirect=/learn");
+        return;
+      }
+
+      if (user?.role === "Instructor" || user?.role === "Admin") {
+        router.push("/studio/courses");
+        return;
+      }
+
+      // If already on /learn/[courseId]/[lessonId], no need to re-navigate
+      if (pathname && pathname.startsWith("/learn/")) {
+        return;
+      }
+
+      router.push("/learn");
+    }
+  };
 
   return (
     <aside className="w-56 shrink-0 border-r border-border bg-card/50 p-4 min-h-[calc(100vh-4rem)]">
@@ -43,6 +70,7 @@ export function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              onClick={(e) => handleNavClick(e, item)}
               className={cn(
                 "flex items-center gap-2.5 rounded-md px-3.5 py-2.5 text-sm font-medium transition-colors",
                 isActive

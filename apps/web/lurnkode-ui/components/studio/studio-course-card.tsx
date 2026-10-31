@@ -15,10 +15,8 @@ interface StudioCourseCardProps {
 export function StudioCourseCard({
   course,
   onEdit,
-  onViewSubmissions,
 }: StudioCourseCardProps) {
   const isPublished = course.status === "Published";
-  const isDraft = course.status === "Draft";
   const isArchived = course.status === "Archived";
 
   return (
@@ -126,6 +124,7 @@ export function StudioCourseCard({
             Edit
           </Button>
 
+          {/* Temporarily commented out Submissions button
           <Button
             type="button"
             variant="outline"
@@ -135,6 +134,7 @@ export function StudioCourseCard({
           >
             {isPublished ? "Submissions" : isDraft ? "Preview" : "Archived"}
           </Button>
+          */}
         </div>
       </div>
     </div>

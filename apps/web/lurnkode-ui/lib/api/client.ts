@@ -1,7 +1,20 @@
 import { ApiResponse } from "./types";
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://localhost:8000";
+export function getApiBaseUrl(): string {
+  if (typeof window === "undefined") {
+    return (
+      process.env.INTERNAL_API_URL?.replace(/\/+$/, "") ||
+      process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
+      "http://localhost:8000"
+    );
+  }
+  return (
+    process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
+    "http://localhost:8000"
+  );
+}
+
+export const API_BASE_URL = getApiBaseUrl();
 
 const ACCESS_TOKEN_KEY = "lurnkode_access_token";
 
@@ -28,11 +41,13 @@ export function getStoredToken(): string | null {
 export function setStoredToken(token: string): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  document.cookie = `${ACCESS_TOKEN_KEY}=${encodeURIComponent(token)}; path=/; max-age=604800; SameSite=Lax`;
 }
 
 export function clearStoredToken(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(ACCESS_TOKEN_KEY);
+  document.cookie = `${ACCESS_TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`;
 }
 
 export interface RequestOptions extends RequestInit {
@@ -46,7 +61,8 @@ export async function apiClient<T>(
 ): Promise<T> {
   const { token, query, headers: customHeaders, ...fetchOptions } = options;
 
-  let url = endpoint.startsWith("http") ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const baseUrl = getApiBaseUrl();
+  let url = endpoint.startsWith("http") ? endpoint : `${baseUrl}${endpoint}`;
 
   if (query) {
     const searchParams = new URLSearchParams();

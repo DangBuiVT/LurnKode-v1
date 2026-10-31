@@ -4,36 +4,55 @@ import {
   BackendEnrollment,
 } from "./types";
 import { Course, CourseDetail, Chapter, Lesson, CourseStatus } from "@/types/course";
-import { mockDb, CURRENT_USER } from "@/lib/db";
+
+function inferCategory(title: string, desc?: string | null): string {
+  const text = `${title} ${desc || ""}`.toLowerCase();
+  if (text.includes("ai") || text.includes("rag") || text.includes("vector") || text.includes("machine learning")) {
+    return "Artificial Intelligence";
+  }
+  if (text.includes("web") || text.includes("next.js") || text.includes("react") || text.includes("frontend")) {
+    return "Web Development";
+  }
+  if (text.includes("data structure") || text.includes("algorithm") || text.includes("dữ liệu") || text.includes("giải thuật")) {
+    return "Computer Science";
+  }
+  if (text.includes("database") || text.includes("sql") || text.includes("cơ sở dữ liệu")) {
+    return "Data & Systems";
+  }
+  return "Software Engineering";
+}
 
 /**
- * Chuyển đổi dữ liệu từ Backend M2 sang định dạng Course của M5 UI
+ * Transforms Backend M2 course item into M5 Course view model
  */
 export function adaptBackendCourse(
   bCourse: BackendCourse,
   enrollment?: BackendEnrollment | null
 ): Course {
   const status: CourseStatus = enrollment
-    ? enrollment.lastAccessedLessonId
-      ? "in_progress"
-      : "in_progress"
+    ? "in_progress"
     : "not_enrolled";
+
+  const instructor =
+    bCourse.instructorName ||
+    bCourse.instructor?.fullName ||
+    "Instructor";
 
   return {
     id: bCourse.id,
     slug: bCourse.title.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
     title: bCourse.title,
     description: bCourse.description || "",
-    instructor: "LurnKode Instructor",
+    instructor,
     status,
     progress: enrollment ? 0 : 0,
-    category: "Software Engineering",
+    category: inferCategory(bCourse.title, bCourse.description),
     createdAt: bCourse.createdAt,
   };
 }
 
 /**
- * Chuyển đổi dữ liệu chi tiết từ Backend M2 sang định dạng CourseDetail của M5 UI
+ * Transforms Backend M2 course detail into M5 CourseDetail view model
  */
 export function adaptBackendCourseDetail(
   detail: BackendCourseDetail,
@@ -42,7 +61,7 @@ export function adaptBackendCourseDetail(
   let totalLessons = 0;
   let unlockedRank = 0;
 
-  // Gom các bài học để tính toán thứ tự toàn cục
+  // Collect lessons to compute sequence
   const allLessons: Array<{ id: string; chapterOrder: number; lessonOrder: number }> = [];
   detail.chapters.forEach((ch) => {
     ch.lessons.forEach((l) => {
@@ -81,8 +100,8 @@ export function adaptBackendCourseDetail(
       const lessonRank =
         allLessons.findIndex((item) => item.id === l.id) + 1;
 
-      // Logic mở khóa tuần tự:
-      // Bài đầu tiên (rank 1) luôn mở khi đã enroll; bài kế tiếp mở khi bài trước đã xong.
+      // Sequential unlock logic:
+      // First lesson is unlocked when enrolled; next unlocked after completing previous.
       let lessonStatus: "completed" | "in_progress" | "locked" = "locked";
       if (!enrollment) {
         lessonStatus = "locked";
@@ -109,23 +128,27 @@ export function adaptBackendCourseDetail(
       id: ch.id,
       chapterNumber: ch.orderIndex,
       title: ch.title,
-      createdAt: new Date(ch.createdAt).toLocaleDateString("en-GB"),
+      createdAt: new Date(ch.createdAt).toLocaleDateString("en-US"),
       isLocked: lessons.every((l) => l.status === "locked"),
       lessons,
     };
   });
+
+  const instructor =
+    detail.instructorName ||
+    detail.instructor?.fullName ||
+    "Instructor";
 
   return {
     id: detail.id,
     slug: detail.title.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
     title: detail.title,
     description: detail.description || "",
-    instructor: "LurnKode Instructor",
+    instructor,
     status,
     overallProgress,
-    category: "Software Engineering",
+    category: inferCategory(detail.title, detail.description),
     createdAt: detail.createdAt,
     chapters,
   };
 }
-

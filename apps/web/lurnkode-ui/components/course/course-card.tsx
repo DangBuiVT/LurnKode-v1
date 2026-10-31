@@ -131,7 +131,7 @@ export function CourseCard({ course, onEnroll, onResume, onLeave }: CourseCardPr
                   onLeave?.(course.id);
                 }}
                 className="h-8 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors gap-1"
-                title="Rời khỏi khóa học"
+                title="Leave this course"
               >
                 <LogOut className="size-3.5" />
                 <span>Leave</span>

@@ -1,13 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { COURSES, fetchCourseById } from "@/data/courses";
+import { fetchCourseById } from "@/data/courses";
 import { CourseDetailContent } from "./course-detail-content";
-
-export function generateStaticParams() {
-  return COURSES.map((course) => ({
-    courseId: course.id,
-  }));
-}
 
 interface PageProps {
   params: Promise<{
