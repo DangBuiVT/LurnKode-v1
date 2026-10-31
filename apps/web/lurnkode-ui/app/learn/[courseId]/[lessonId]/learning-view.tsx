@@ -7,6 +7,7 @@ import { LessonQuizCard } from "@/components/learn/lesson-quiz-card";
 import { LessonSwitcher } from "@/components/learn/lesson-switcher";
 import { mockDb } from "@/lib/db/mock-db";
 import { CURRENT_USER } from "@/lib/db/mock-data";
+import { enrollmentsApi } from "@/lib/api";
 import { Course, Lesson, User, Material } from "@/lib/db/schema";
 import { Award, FileEdit } from "lucide-react";
 
@@ -35,9 +36,14 @@ export function LearningView({
     mockDb.touchLessonAccess(CURRENT_USER.id, course.id, lesson.id);
   }, [course.id, lesson.id]);
 
-  const handleToggleComplete = () => {
-    const newState = mockDb.toggleLessonCompleted(CURRENT_USER.id, course.id, lesson.id);
-    setIsCompleted(newState);
+  const handleToggleComplete = async () => {
+    try {
+      await enrollmentsApi.completeLesson(lesson.id);
+      setIsCompleted(true);
+    } catch {
+      const newState = mockDb.toggleLessonCompleted(CURRENT_USER.id, course.id, lesson.id);
+      setIsCompleted(newState);
+    }
   };
 
   const cleanCourseId = course.id.replace("c-", "");

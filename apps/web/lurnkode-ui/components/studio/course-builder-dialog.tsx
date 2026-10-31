@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Course, MaterialType } from "@/lib/db/schema";
 import { mockDb } from "@/lib/db/mock-db";
+import { coursesApi } from "@/lib/api";
 
 type BuilderStep = 1 | 2 | 3 | 4;
 
@@ -373,7 +374,7 @@ function CourseBuilderModalContent({
   };
 
   // Submit / Save
-  const handleSaveCourse = (
+  const handleSaveCourse = async (
     targetStatus?: "draft" | "published" | "archived",
   ) => {
     if (!title.trim()) {
@@ -385,37 +386,79 @@ function CourseBuilderModalContent({
     const finalStatus = targetStatus || status;
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      const savedCourse = mockDb.saveCourseWithCurriculum({
-        courseId: courseId || undefined,
-        instructor_id: "u-inst-01",
-        title: title.trim(),
-        description: description.trim(),
-        status: finalStatus,
-        category: category.trim(),
-        chapters: chapters.map((ch, chIdx) => ({
-          id: ch.id,
-          title: ch.title,
-          order_index: chIdx + 1,
-          lessons: ch.lessons.map((l, lesIdx) => ({
-            id: l.id,
-            title: l.title,
-            order_index: lesIdx + 1,
-            materials: l.materials.map((m) => ({
-              id: m.id,
-              title: m.title,
-              type: m.type,
-              content: m.content,
-              is_rag_source: m.is_rag_source,
-            })),
+
+    // Đồng bộ trực tiếp lên Backend M2 qua API
+    try {
+      if (!courseId) {
+        const newCourse = await coursesApi.create({
+          title: title.trim(),
+          description: description.trim(),
+        });
+        if (newCourse?.id) {
+          for (let chIdx = 0; chIdx < chapters.length; chIdx++) {
+            const ch = chapters[chIdx];
+            const createdCh = await coursesApi.createChapter(newCourse.id, {
+              title: ch.title,
+              orderIndex: chIdx + 1,
+            });
+            if (createdCh?.id) {
+              for (let lesIdx = 0; lesIdx < ch.lessons.length; lesIdx++) {
+                const les = ch.lessons[lesIdx];
+                const createdLes = await coursesApi.createLesson(createdCh.id, {
+                  title: les.title,
+                  orderIndex: lesIdx + 1,
+                });
+                if (createdLes?.id) {
+                  for (const mat of les.materials) {
+                    await coursesApi.createMaterial(createdLes.id, {
+                      type: mat.type,
+                      title: mat.title,
+                      textContent: mat.content,
+                      isRagSource: mat.is_rag_source,
+                    }).catch(() => null);
+                  }
+                }
+              }
+            }
+          }
+          if (finalStatus === "published") {
+            await coursesApi.update(newCourse.id, { status: "published" });
+          }
+        }
+      }
+    } catch {
+      // Backend offline hoặc lỗi quyền -> lưu vào local mockDb
+    }
+
+    const savedCourse = mockDb.saveCourseWithCurriculum({
+      courseId: courseId || undefined,
+      instructor_id: "u-inst-01",
+      title: title.trim(),
+      description: description.trim(),
+      status: finalStatus,
+      category: category.trim(),
+      chapters: chapters.map((ch, chIdx) => ({
+        id: ch.id,
+        title: ch.title,
+        order_index: chIdx + 1,
+        lessons: ch.lessons.map((l, lesIdx) => ({
+          id: l.id,
+          title: l.title,
+          order_index: lesIdx + 1,
+          materials: l.materials.map((m) => ({
+            id: m.id,
+            title: m.title,
+            type: m.type,
+            content: m.content,
+            is_rag_source: m.is_rag_source,
           })),
         })),
-      });
+      })),
+    });
 
-      setIsSubmitting(false);
-      onSaved(savedCourse);
-      onClose();
-    }, 400);
+    setIsSubmitting(false);
+    onSaved(savedCourse);
+    onClose();
   };
 
   // Counts for summary

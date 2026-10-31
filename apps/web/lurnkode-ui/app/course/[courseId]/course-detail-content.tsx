@@ -8,6 +8,7 @@ import { CourseDetail, Lesson } from "@/types/course";
 import { Button } from "@/components/ui/button";
 import { mockDb } from "@/lib/db/mock-db";
 import { CURRENT_USER } from "@/lib/db/mock-data";
+import { enrollmentsApi } from "@/lib/api";
 import { PlayCircle, BookOpen, LogOut, CheckCircle2, X } from "lucide-react";
 
 interface CourseDetailContentProps {
@@ -49,8 +50,12 @@ export function CourseDetailContent({ course }: CourseDetailContentProps) {
     router.push(`/learn/${course.id}/${lesson.id}`);
   };
 
-  const handleEnroll = () => {
-    mockDb.enrollCourse(CURRENT_USER.id, course.id);
+  const handleEnroll = async () => {
+    try {
+      await enrollmentsApi.enroll(course.id);
+    } catch {
+      mockDb.enrollCourse(CURRENT_USER.id, course.id);
+    }
     setIsEnrolled(true);
     setProgress(course.overallProgress || 0);
     setNotification("Đăng ký tham gia khóa học thành công! Chúc bạn học tốt.");

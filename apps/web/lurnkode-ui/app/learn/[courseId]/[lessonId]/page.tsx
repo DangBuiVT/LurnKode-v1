@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { mockDb } from "@/lib/db/mock-db";
 import { CURRENT_USER } from "@/lib/db/mock-data";
+import { enrollmentsApi } from "@/lib/api";
 import { LearningView } from "./learning-view";
 import { LessonWithMaterials, Material } from "@/lib/db/schema";
 
@@ -67,9 +68,31 @@ async function LearnLessonContent({ params }: PageProps) {
       created_at: course.created_at,
     };
 
+  // Query live materials from Backend M2 API if available
+  let liveMaterials: Material[] | null = null;
+  try {
+    const raw = await enrollmentsApi.accessLesson(targetLesson.id);
+    if (raw && raw.length > 0) {
+      liveMaterials = raw.map((m) => ({
+        id: m.id,
+        lesson_id: m.lessonId,
+        title: m.title,
+        type: m.type as any,
+        content: m.textContent || "",
+        content_url: m.contentUrl || undefined,
+        is_rag_source: m.isRagSource,
+        created_at: m.createdAt,
+      }));
+    }
+  } catch {
+    // API offline hoặc fallback
+  }
+
   // Materials for this lesson
   const materials: Material[] =
-    targetLesson.materials && targetLesson.materials.length > 0
+    liveMaterials && liveMaterials.length > 0
+      ? liveMaterials
+      : targetLesson.materials && targetLesson.materials.length > 0
       ? targetLesson.materials
       : [
           {

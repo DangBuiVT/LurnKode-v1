@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { COURSES, getCourseByIdOrSlug } from "@/data/courses";
+import { COURSES, fetchCourseById } from "@/data/courses";
 import { CourseDetailContent } from "./course-detail-content";
 
 export function generateStaticParams() {
@@ -17,7 +17,7 @@ interface PageProps {
 
 async function CourseDetailView({ params }: PageProps) {
   const { courseId } = await params;
-  const course = getCourseByIdOrSlug(courseId);
+  const course = await fetchCourseById(courseId);
 
   if (!course) {
     notFound();

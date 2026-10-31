@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Search,
   Filter,
@@ -12,8 +12,9 @@ import {
   Clock,
   CheckCircle2,
 } from "lucide-react";
-import { COURSES } from "@/data/courses";
+import { COURSES, fetchCourses } from "@/data/courses";
 import { mockDb, CURRENT_USER } from "@/lib/db";
+import { enrollmentsApi } from "@/lib/api";
 import { CourseGrid } from "@/components/course/course-grid";
 import { LeaveCourseDialog } from "@/components/course/leave-course-dialog";
 import { Pagination } from "@/components/ui/pagination";
@@ -39,6 +40,15 @@ export default function CourseCatalogPage() {
   const [leavingCourse, setLeavingCourse] = useState<Course | null>(null);
   const [isLeaving, setIsLeaving] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
+
+  // Load courses dynamically from M2 Backend API
+  useEffect(() => {
+    fetchCourses().then((data) => {
+      if (data && data.length > 0) {
+        setCourses(data);
+      }
+    });
+  }, []);
 
   // Extract unique instructors and categories
   const instructors = useMemo(() => {
@@ -178,9 +188,14 @@ export default function CourseCatalogPage() {
     categoryFilter !== "all" ||
     sortBy !== "newest";
 
-  const handleEnroll = (courseId: string) => {
-    const dbCourseId = courseId.startsWith("c-") ? courseId : `c-${courseId}`;
-    mockDb.enrollCourse(CURRENT_USER.id, dbCourseId);
+  const handleEnroll = async (courseId: string) => {
+    try {
+      await enrollmentsApi.enroll(courseId);
+    } catch {
+      // Fallback local db khi backend offline hoặc test
+      const dbCourseId = courseId.startsWith("c-") ? courseId : `c-${courseId}`;
+      mockDb.enrollCourse(CURRENT_USER.id, dbCourseId);
+    }
 
     setCourses((prev) =>
       prev.map((c) =>
