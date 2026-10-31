@@ -261,6 +261,7 @@ User / Admin └── AuditLog
 
 | File | Mô tả |
 |---|---|
+| [DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md) | **Hướng dẫn toàn diện cho lập trình viên (Setup, Docker, Kiến trúc, API & Kiểm thử)** |
 | [`docs/guides/tech-stack.md`](./docs/guides/tech-stack.md) | Kiến trúc chi tiết, stack decisions, LLM options |
 | [`docs/guides/getting-started.md`](./docs/guides/getting-started.md) | Setup môi trường dev từ đầu |
 | [`docs/guides/environment-setup.md`](./docs/guides/environment-setup.md) | Cấu hình `.env` cho mọi môi trường |
