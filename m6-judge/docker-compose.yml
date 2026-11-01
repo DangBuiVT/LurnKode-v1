@@ -1,0 +1,83 @@
+services:
+  postgres:
+    image: postgres:16.6-alpine
+    environment:
+      POSTGRES_USER: judge
+      POSTGRES_PASSWORD: judge
+      POSTGRES_DB: judge
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U judge -d judge"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Build-only services: produce the pinned runner images, then exit.
+  python-runner:
+    build: { context: ./runners, dockerfile: python.Dockerfile }
+    image: m6-python-runner:local
+    entrypoint: ["true"]
+    restart: "no"
+  cpp-runner:
+    build: { context: ./runners, dockerfile: cpp.Dockerfile }
+    image: m6-cpp-runner:local
+    entrypoint: ["true"]
+    restart: "no"
+
+  judge-api:
+    build: { context: ., target: app }
+    command: ["bun", "run", "src/api/main.ts"]
+    environment: &common-env
+      DATABASE_URL: postgres://judge:judge@postgres:5432/judge
+      REDIS_URL: redis://redis:6379
+      SERVICE_TOKENS: "m3:dev-m3-token:submit,read;ops:dev-ops-token:read"
+      CALLBACK_URL: http://mock-m3:3000/internal/v1/judge-results
+      CALLBACK_TOKEN: dev-callback-token
+      PORT: "4000"
+    ports: ["4000:4000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  judge-dispatcher:
+    build: { context: ., target: app }
+    command: ["bun", "run", "src/dispatcher/main.ts"]
+    environment: *common-env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  judge-worker:
+    build: { context: ., target: worker }
+    command: ["bun", "run", "src/worker/main.ts"]
+    environment: *common-env
+    volumes:
+      # Trusted worker only. Never mounted into learner sandboxes.
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      python-runner: { condition: service_completed_successfully }
+      cpp-runner: { condition: service_completed_successfully }
+
+  mock-m3:
+    build: { context: ., target: app }
+    command: ["bun", "run", "mock-m3/server.ts"]
+    environment:
+      PORT: "3000"
+      JUDGE_API_URL: http://judge-api:4000
+      JUDGE_API_TOKEN: dev-m3-token
+      CALLBACK_TOKEN: dev-callback-token
+    ports: ["3000:3000"]
+    depends_on:
+      - judge-api

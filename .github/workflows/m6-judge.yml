@@ -1,0 +1,54 @@
+name: m6-judge-ci
+
+on:
+  pull_request:
+    paths: ["m6-judge/**", ".github/workflows/m6-judge.yml"]
+  push:
+    branches: [main]
+    paths: ["m6-judge/**", ".github/workflows/m6-judge.yml"]
+
+# Minimum permissions; no secrets are used (safe for untrusted fork PRs).
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: m6-judge
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16.6-alpine
+        env: { POSTGRES_USER: judge, POSTGRES_PASSWORD: judge, POSTGRES_DB: judge }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U judge -d judge" --health-interval 2s --health-timeout 3s --health-retries 30
+      redis:
+        image: redis:7.4-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 2s --health-timeout 3s --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Install (frozen lockfile)
+        run: bun install --frozen-lockfile
+      - name: Typecheck
+        run: bun run typecheck
+      - name: Unit tests with coverage
+        run: bun test tests/unit --coverage
+      - name: Build runner images
+        run: |
+          docker build -t m6-python-runner:local -f runners/python.Dockerfile runners
+          docker build -t m6-cpp-runner:local -f runners/cpp.Dockerfile runners
+      - name: Integration tests (Postgres, Redis, Docker sandbox security)
+        run: bun test tests/integration
+      - name: Build API/worker images
+        run: |
+          docker build --target app -t m6-judge-app .
+          docker build --target worker -t m6-judge-worker .

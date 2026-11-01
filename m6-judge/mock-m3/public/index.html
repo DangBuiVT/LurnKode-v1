@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LurnKode Judge — M6 Demo</title>
+  <meta name="description" content="Demo of the M6 Judge microservice: submit Python or C++ code, run it in a hardened Docker sandbox and watch the verdict arrive via callback." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: hsl(230 30% 7%);
+      --panel: hsl(230 25% 11% / .72);
+      --border: hsl(230 25% 22% / .8);
+      --text: hsl(220 25% 94%);
+      --muted: hsl(225 15% 62%);
+      --accent: hsl(262 90% 68%);
+      --accent2: hsl(190 95% 55%);
+      --ac: hsl(150 70% 50%);
+      --wa: hsl(0 85% 65%);
+      --tle: hsl(38 95% 58%);
+      --rte: hsl(320 80% 65%);
+      --ce: hsl(210 90% 65%);
+      --fail: hsl(0 0% 60%);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; color: var(--text);
+      font-family: "Inter", system-ui, sans-serif;
+      background:
+        radial-gradient(900px 500px at 8% -10%, hsl(262 80% 40% / .35), transparent 60%),
+        radial-gradient(800px 500px at 100% 0%, hsl(190 90% 40% / .25), transparent 60%),
+        var(--bg);
+    }
+    header { max-width: 1240px; margin: 0 auto; padding: 36px 24px 8px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .logo { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; font-weight: 700; font-size: 20px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 8px 30px hsl(262 90% 60% / .45); }
+    h1 { font-size: 22px; margin: 0; letter-spacing: -.01em; }
+    .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+    .stats { display: flex; gap: 10px; flex-wrap: wrap; }
+    .chip { padding: 8px 14px; border-radius: 999px; background: var(--panel); border: 1px solid var(--border); font-size: 12.5px; color: var(--muted); backdrop-filter: blur(10px); }
+    .chip b { color: var(--text); font-weight: 600; margin-left: 4px; }
+    main { max-width: 1240px; margin: 0 auto; padding: 18px 24px 60px; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 22px; }
+    @media (max-width: 960px) { main { grid-template-columns: 1fr; } }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 20px; backdrop-filter: blur(14px); box-shadow: 0 20px 60px hsl(230 60% 3% / .45); }
+    .card h2 { margin: 0 0 4px; font-size: 15px; letter-spacing: .02em; }
+    .hint { color: var(--muted); font-size: 12.5px; margin: 0 0 14px; line-height: 1.5; }
+    .problem { background: hsl(230 30% 9% / .8); border: 1px dashed var(--border); border-radius: 12px; padding: 12px 14px; font-size: 13px; margin-bottom: 14px; line-height: 1.55; }
+    .problem code { font-family: "JetBrains Mono", monospace; color: var(--accent2); }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: hsl(230 30% 9%); border: 1px solid var(--border); }
+    .seg button { border: 0; background: transparent; color: var(--muted); padding: 7px 16px; border-radius: 9px; font: 600 13px Inter; cursor: pointer; transition: all .2s; }
+    .seg button.on { color: #fff; background: linear-gradient(135deg, var(--accent), hsl(240 85% 60%)); box-shadow: 0 4px 16px hsl(262 90% 60% / .4); }
+    .presets { display: flex; gap: 6px; flex-wrap: wrap; }
+    .preset { border: 1px solid var(--border); background: transparent; color: var(--muted); padding: 5px 11px; border-radius: 999px; font: 500 12px Inter; cursor: pointer; transition: all .18s; }
+    .preset:hover { color: var(--text); border-color: var(--accent); transform: translateY(-1px); }
+    textarea { width: 100%; min-height: 250px; resize: vertical; background: hsl(230 35% 6%); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 14px; font: 13.5px/1.6 "JetBrains Mono", monospace; outline: none; tab-size: 4; transition: border-color .2s, box-shadow .2s; }
+    textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px hsl(262 90% 60% / .2); }
+    .submit { margin-top: 14px; width: 100%; border: 0; cursor: pointer; padding: 14px; border-radius: 12px; color: #fff; font: 600 15px Inter; letter-spacing: .01em;
+      background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 10px 34px hsl(262 90% 60% / .4); transition: transform .15s, box-shadow .2s, opacity .2s; }
+    .submit:hover { transform: translateY(-2px); box-shadow: 0 14px 40px hsl(262 90% 60% / .55); }
+    .submit:active { transform: translateY(0); }
+    .submit:disabled { opacity: .6; cursor: wait; }
+    .toggle { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); font-size: 12.5px; color: var(--muted); }
+    .toggle button { margin-left: auto; border: 1px solid var(--border); background: hsl(230 30% 12%); color: var(--text); padding: 6px 12px; border-radius: 9px; font: 600 12px Inter; cursor: pointer; transition: all .18s; }
+    .toggle button:hover { border-color: var(--tle); color: var(--tle); }
+    .list { display: flex; flex-direction: column; gap: 10px; max-height: 760px; overflow: auto; padding-right: 4px; }
+    .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 60px 10px; }
+    .item { border: 1px solid var(--border); border-radius: 14px; padding: 14px; background: hsl(230 30% 9% / .7); transition: border-color .3s; }
+    .item.enter { animation: pop .35s ease both; }
+    .item.done { border-color: hsl(230 25% 28%); }
+    .item .top { cursor: pointer; }
+    .item .caret { color: var(--muted); font-size: 11px; transition: transform .2s; display: inline-block; }
+    .item.open .caret { transform: rotate(90deg); }
+    .tests { display: none; margin-top: 12px; flex-direction: column; gap: 8px; }
+    .item.open .tests { display: flex; }
+    .trow { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; background: hsl(230 35% 6% / .7); }
+    .trow-h { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+    .trow-h .grow { flex: 1; color: var(--muted); }
+    .badge { font: 700 11px "JetBrains Mono", monospace; padding: 2px 8px; border-radius: 6px; }
+    .panes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+    @media (max-width: 720px) { .panes { grid-template-columns: 1fr; } }
+    .pane h4 { margin: 0 0 4px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .pane pre { margin: 0; padding: 8px; border-radius: 8px; background: hsl(230 35% 5%); font: 12px/1.5 "JetBrains Mono", monospace; white-space: pre-wrap; word-break: break-all; min-height: 32px; max-height: 160px; overflow: auto; }
+    .pane .ln { display: block; }
+    .pane .ln.diff { background: hsl(0 85% 65% / .18); color: var(--wa); }
+    .pane .ln.same { color: var(--ac); }
+    .trunc { font-size: 11px; color: var(--tle); margin-top: 4px; }
+    .lock { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+    @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .meta { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .tag { padding: 2px 8px; border-radius: 6px; background: hsl(230 30% 16%); font: 500 11px "JetBrains Mono", monospace; color: var(--text); }
+    .verdict { font: 700 13px "JetBrains Mono", monospace; padding: 5px 12px; border-radius: 9px; letter-spacing: .04em; }
+    .v-AC { color: var(--ac); background: hsl(150 70% 50% / .13); } .v-WA { color: var(--wa); background: hsl(0 85% 65% / .13); }
+    .v-TLE { color: var(--tle); background: hsl(38 95% 58% / .13); } .v-RTE { color: var(--rte); background: hsl(320 80% 65% / .13); }
+    .v-CE { color: var(--ce); background: hsl(210 90% 65% / .13); } .v-FAILED { color: var(--fail); background: hsl(0 0% 60% / .15); }
+    .pending { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--accent2); }
+    .spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid hsl(190 95% 55% / .25); border-top-color: var(--accent2); animation: sp .8s linear infinite; }
+    @keyframes sp { to { transform: rotate(360deg); } }
+    .detail { margin-top: 10px; font-size: 12.5px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+    .detail b { color: var(--text); font-weight: 600; }
+    pre.cm { margin: 10px 0 0; padding: 10px; border-radius: 9px; background: hsl(230 35% 6%); color: var(--ce); font: 12px/1.5 "JetBrains Mono", monospace; white-space: pre-wrap; }
+    .err { color: var(--wa); font-size: 12.5px; margin-top: 8px; }
+    footer { text-align: center; color: var(--muted); font-size: 12px; padding-bottom: 30px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo" aria-hidden="true">⚖</div>
+      <div>
+        <h1>LurnKode Judge · M6 Demo</h1>
+        <div class="sub">Mock M3 → Judge API → BullMQ → Docker sandbox → callback</div>
+      </div>
+    </div>
+    <div class="stats" aria-live="polite">
+      <span class="chip" id="chip-received">Callbacks received<b>0</b></span>
+      <span class="chip" id="chip-dup">Duplicates ignored<b>0</b></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="card" aria-labelledby="submit-title">
+      <h2 id="submit-title">Submit a solution</h2>
+      <p class="hint">Hidden tests stay on the server. The sandbox has no network, a read-only filesystem, 1 CPU, 128&nbsp;MB and a 3&nbsp;s limit.</p>
+      <div class="problem"><b>Problem · A + B</b><br />Read two integers <code>a b</code> and print <code>a + b</code>. (3 hidden tests)</div>
+
+      <div class="row">
+        <div class="seg" role="tablist" aria-label="Language">
+          <button id="lang-python" class="on" role="tab" data-lang="python">Python</button>
+          <button id="lang-cpp" role="tab" data-lang="cpp">C++</button>
+        </div>
+        <div class="presets" id="presets" aria-label="Sample solutions"></div>
+      </div>
+
+      <textarea id="code" spellcheck="false" aria-label="Source code"></textarea>
+      <button class="submit" id="submit">Submit for judging</button>
+
+      <div class="toggle">
+        <span>Simulate M3 outage for the next callbacks to see durable retry with the same <code>eventId</code>.</span>
+        <button id="fail-next">Fail next 2</button>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="results-title">
+      <h2 id="results-title">Submissions</h2>
+      <p class="hint">Verdicts arrive asynchronously through the signed callback, not by polling the judge.</p>
+      <div class="list" id="list"><div class="empty">No submissions yet — pick a sample and submit.</div></div>
+    </section>
+  </main>
+  <footer>Verdicts: AC · WA · TLE · RTE · CE &nbsp;|&nbsp; infrastructure failures never become WA</footer>
+
+<script>
+  const SAMPLES = {
+    python: {
+      "AC": "a, b = map(int, input().split())\nprint(a + b)\n",
+      "WA": "a, b = map(int, input().split())\nprint(a - b)\n",
+      "TLE": "while True:\n    pass\n",
+      "RTE": "a, b = map(int, input().split())\nprint(a // 0)\n",
+      "Memory": "x = bytearray(400 * 1024 * 1024)\nprint(len(x))\n",
+      "Network": "import socket\ntry:\n    socket.create_connection(('1.1.1.1', 53), timeout=2)\n    print('NET')\nexcept Exception:\n    print('BLOCKED')\n",
+    },
+    cpp: {
+      "AC": "#include <iostream>\nint main() {\n  long long a, b;\n  std::cin >> a >> b;\n  std::cout << a + b << std::endl;\n}\n",
+      "WA": "#include <iostream>\nint main() {\n  long long a, b;\n  std::cin >> a >> b;\n  std::cout << a * b << std::endl;\n}\n",
+      "TLE": "int main() { for (;;) {} }\n",
+      "RTE": "int main() { int* p = nullptr; *p = 1; }\n",
+      "CE": "int main() { return 0 }\n",
+    },
+  };
+  let lang = "python", label = "AC";
+  const $ = (id) => document.getElementById(id);
+
+  function renderPresets() {
+    $("presets").innerHTML = "";
+    for (const name of Object.keys(SAMPLES[lang])) {
+      const b = document.createElement("button");
+      b.className = "preset"; b.textContent = name; b.id = `preset-${lang}-${name}`;
+      b.onclick = () => { label = name; $("code").value = SAMPLES[lang][name]; };
+      $("presets").appendChild(b);
+    }
+    label = "AC"; $("code").value = SAMPLES[lang]["AC"];
+  }
+  document.querySelectorAll(".seg button").forEach((b) => (b.onclick = () => {
+    lang = b.dataset.lang;
+    document.querySelectorAll(".seg button").forEach((x) => x.classList.toggle("on", x === b));
+    renderPresets();
+  }));
+  $("code").addEventListener("keydown", (e) => {
+    if (e.key === "Tab") { e.preventDefault(); const t = e.target, s = t.selectionStart; t.value = t.value.slice(0, s) + "    " + t.value.slice(t.selectionEnd); t.selectionStart = t.selectionEnd = s + 4; }
+  });
+
+  $("submit").onclick = async () => {
+    const btn = $("submit"); btn.disabled = true; btn.textContent = "Submitting…";
+    try {
+      await fetch("/api/submit", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ language: lang, sourceCode: $("code").value, label }) });
+      await refresh();
+    } finally { btn.disabled = false; btn.textContent = "Submit for judging"; }
+  };
+  $("fail-next").onclick = async () => {
+    await fetch("/api/fail-next", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ count: 2 }) });
+    refresh();
+  };
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  // Line-by-line diff of two outputs; mismatching lines are highlighted on both sides.
+  function diffPanes(actual, expected) {
+    const a = String(actual ?? "").replace(/\s+$/, "").split("\n");
+    const e = String(expected ?? "").replace(/\s+$/, "").split("\n");
+    const n = Math.max(a.length, e.length);
+    const side = (lines, other) => Array.from({ length: n }, (_, i) => {
+      if (i >= lines.length) return "";
+      const same = lines[i].trimEnd() === (other[i] ?? "").trimEnd();
+      return `<span class="ln ${same ? "same" : "diff"}">${esc(lines[i]) || "&nbsp;"}</span>`;
+    }).join("");
+    return { actual: side(a, e), expected: side(e, a) };
+  }
+
+  function renderTest(t) {
+    const ok = t.passed;
+    const badge = `<span class="badge v-${ok ? "AC" : t.verdict}">${ok ? "PASS" : "FAIL · " + t.verdict}</span>`;
+    const head = `<div class="trow-h">${badge}<span class="grow">${esc(t.testCaseId)} · ${esc(t.visibility)}</span><span>${t.runtimeMs} ms</span></div>`;
+    if (t.visibility !== "public") return `<div class="trow">${head}<div class="lock">🔒 Hidden test — input and expected output are not shown.</div></div>`;
+    const d = diffPanes(t.actualOutput, t.expectedOutput);
+    return `<div class="trow">${head}<div class="panes">
+      <div class="pane"><h4>Input</h4><pre>${esc(t.input)}</pre></div>
+      <div class="pane"><h4>Your output</h4><pre>${d.actual || "&nbsp;"}</pre></div>
+      <div class="pane"><h4>Expected</h4><pre>${d.expected || "&nbsp;"}</pre></div>
+    </div>${t.truncated ? '<div class="trunc">Output truncated to 4 KB.</div>' : ""}</div>`;
+  }
+
+  function renderBody(s) {
+    const r = s.result;
+    let right;
+    if (r) {
+      const v = r.verdict ?? "FAILED";
+      right = `<span class="verdict v-${v}">${v === "FAILED" ? "INFRA FAILURE" : v}</span>`;
+    } else if (s.status === "rejected") right = `<span class="verdict v-FAILED">REJECTED</span>`;
+    else right = `<span class="pending"><span class="spin"></span>${s.status === "submitting" ? "Submitting" : "Judging"}…</span>`;
+
+    const hasTests = !!(r && r.tests && r.tests.length);
+    const detail = r ? `<div class="detail">
+        ${r.summary ? `<span>Tests <b>${r.summary.passedTests}/${r.summary.totalTests}</b></span>` : ""}
+        ${r.metrics?.runtimeMs != null ? `<span>Slowest run <b>${r.metrics.runtimeMs} ms</b></span>` : ""}
+        ${r.failureCode ? `<span>Failure <b>${esc(r.failureCode)}</b></span>` : ""}
+      </div>${r.compileMessage ? `<pre class="cm">${esc(r.compileMessage)}</pre>` : ""}` : "";
+    return `<div class="top">
+        <div class="meta">${hasTests ? '<span class="caret">▶</span>' : ""}<span class="tag">${esc(s.language)}</span><span>${esc(s.label)}</span><span>${new Date(s.createdAt).toLocaleTimeString()}</span>
+          ${s.judgeSubmissionId ? `<span class="tag" title="judgeSubmissionId">${esc(s.judgeSubmissionId.slice(0, 8))}</span>` : ""}</div>
+        ${right}
+      </div>${detail}${s.error ? `<div class="err">${esc(s.error)}</div>` : ""}
+      ${hasTests ? `<div class="tests">${r.tests.map(renderTest).join("")}</div>` : ""}`;
+  }
+
+  // Keyed DOM: only cards whose data changed are re-rendered; others (and their open state,
+  // spinner and animation) are left untouched, so polling no longer makes the list flicker.
+  const cards = new Map(); // clientSubmissionId -> { el, sig }
+  const EMPTY = '<div class="empty">No submissions yet — pick a sample and submit.</div>';
+  const EMPTY_ID = "list-empty";
+
+  function syncList(submissions) {
+    const list = $("list");
+    const placeholder = list.querySelector(`#${EMPTY_ID}`);
+    if (!submissions.length) {
+      if (!placeholder) { list.innerHTML = `<div id="${EMPTY_ID}">${EMPTY}</div>`; cards.clear(); }
+      return;
+    }
+    placeholder?.remove();
+    const live = new Set();
+    submissions.forEach((s, i) => {
+      live.add(s.clientSubmissionId);
+      const sig = JSON.stringify(s);
+      let c = cards.get(s.clientSubmissionId);
+      if (!c) {
+        const el = document.createElement("article");
+        el.className = "item enter";
+        el.addEventListener("animationend", () => el.classList.remove("enter"));
+        el.addEventListener("click", (ev) => {
+          if (el.querySelector(".tests") && ev.target.closest(".top")) el.classList.toggle("open");
+        });
+        c = { el, sig: "" };
+        cards.set(s.clientSubmissionId, c);
+      }
+      if (c.sig !== sig) {
+        c.el.innerHTML = renderBody(s);
+        c.el.classList.toggle("done", !!s.result);
+        c.sig = sig;
+      }
+      if (list.children[i] !== c.el) list.insertBefore(c.el, list.children[i] ?? null);
+    });
+    for (const [id, c] of cards) if (!live.has(id)) { c.el.remove(); cards.delete(id); }
+  }
+
+  async function refresh() {
+    try {
+      const d = await (await fetch("/api/submissions")).json();
+      syncList(d.submissions);
+      const setText = (id, html) => { const el = $(id); if (el.innerHTML !== html) el.innerHTML = html; };
+      setText("chip-received", `Callbacks received<b>${d.stats.received}</b>`);
+      setText("chip-dup", `Duplicates ignored<b>${d.stats.duplicates}</b>`);
+      const label = d.stats.failNext > 0 ? `Failing next ${d.stats.failNext}…` : "Fail next 2";
+      if ($("fail-next").textContent !== label) $("fail-next").textContent = label;
+    } catch {}
+  }
+  renderPresets(); refresh(); setInterval(refresh, 1000);
+</script>
+</body>
+</html>
