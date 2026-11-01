@@ -1,10 +1,9 @@
-version: "3.8"
-
 services:
-  # 1. Cơ sở dữ liệu chính (PostgreSQL có pgvector cho RAG AI)
+  # 1. Cơ sở dữ liệu chính (PostgreSQL 16 có extension pgvector cho RAG AI)
   postgres:
     image: pgvector/pgvector:pg16
     container_name: lurnkode-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: lurnkode_user
       POSTGRES_PASSWORD: lurnkode_password
@@ -13,13 +12,19 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lurnkode_user -d lurnkode_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - lurnkode-network
 
-  # 2. Redis phục vụ Hàng đợi chấm code Sandbox (BullMQ)[cite: 1]
+  # 2. Redis phục vụ Hàng đợi chấm code Sandbox (BullMQ) & Caching
   redis:
     image: redis:7-alpine
     container_name: lurnkode-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
@@ -27,37 +32,52 @@ services:
     networks:
       - lurnkode-network
 
-  # 3. Phân hệ Backend API Gateway (M1, M2, M3)
+  # 3. Phân hệ Backend API (M1 Auth & Identity, M2 Learning Management)
   api:
-    container_name: lurnkode-backend-m1
+    container_name: lurnkode-api
     build:
       context: ./apps/api
       dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgres://lurnkode_user:lurnkode_password@postgres:5432/lurnkode_db
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      DATABASE_URL: postgresql://lurnkode_user:lurnkode_password@postgres:5432/lurnkode_db
+      PORT: 8000
+      NODE_ENV: production
+      ALLOWED_ORIGINS: http://localhost:3000,http://localhost:3001
+      INTERNAL_SERVICE_KEY: lurnkode_internal_secret_key_m4
+      JWT_PRIVATE_KEY_BASE64: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktZd2dnU2lBZ0VBQW9JQkFRQzJhZERhYXZuUGJBQlIKM040OTNDbnRNSUpyTllmSDE1RkFGRDB1MzhxUFArelRaRnExMHNuV0lqVUtwR0hJQUNaYU9rMWRSSlFSWEJNdAp3ZWNMZ0ZMbTR2ZUdJRnBqUmR6Y3VkeEJObnZjR1Fnb09HcjZuSjFuNEtPUjVJMmw4MmpGbFJFV2wyd2lYQXVzCklTaWhYaHAvOVUxRU5xTzB0L1NYVWJsVFRrVjBaZlR0Ykp4YXpRNU8vVGdIS1U1VWFFSU1HeXc0OXRlSEJqQkoKdHp5SXFkbmJldlBpN2RkdHAxUzVnMnR4S0hjQXRBNis1a2xYNlRXN1BCMUdPZmNTdjRNckprWUdKSzZENWhWYwpYb296aVB4NFhtMTlDRkFIN3daQTVBNVpSald6RERJTjZlWVdlcGkwci80R1pXVWgra1lJREpqY1IzQTUzVjFGCmpMOUQybTdkQWdNQkFBRUNnZ0VBSllqTUFDbUxlaVlWd2NLQ0czWDZUWk5SL3JmdTFzenhWeDlqQUlwdGpvRGYKblJiVkFIMWRhVG0wTXRxa3dTZmd2R2VyUkNJSW1yTFl3bTFYK3BxZTFHSUcvenNZaGoxWnB6UjZVUlBpTkNXVgpjMXM2amhOY1kwUEt2SW9zS0dYWDNQSWhxRVdqcTBWSDVKVVZISEUxNERjTVBWbEY0Ym1KYzNxT09RbE55dGVYCitDc2J4aGZQcFlPcktCSHNLRkdwRU43QjJEcGx6dGJTdlhrWHNjdk5rWTRMWnZzODJucEdQUDVoNjNGaW5WNVoKZDdIOUVpbDM2SDJpTGMvNE1JY1dIQTRIOE9lN0txbis5cXA0SDZnV3BZbmlqeGsrS2VveGlEdlhFTU95UkErTApJTG5JUXBFc2dPZ0MzVDROL3BwRTVOUWEwalNXRlZhT0thVFZUdDN2U1FLQmdRRGE2ejlNVHEyMDZmVnVhelYxClJXTm9ub0NEdkkxTkkwVkNwOGQ2RG0xY1NseC9aZUlkZmdsSlVPdnV6MCtYc0lUdlN1WXNqdmNXN29ObDhaRG4KaWNYZ2lrUXRCTXJOc1QzOUtQblF1Y25KcTN5R3NJeC9nRHZNaWwwVXBWTXk0MHY0WWJqS0REeFdNTWgveW5uUgpreC9QSHB6WE8rb0ZSWVhrK3NEdDh5VzhTUUtCZ1FEVlQ1MWppaS9YYTlsZFNKelJTUFh1S1pwbDFhQlhVdUVlClRSakk5NStyTHNNaWZoc3lTS3JnMFhxcW5tb3hCTjN0aklKZE5BcW1rbW1OQlpTNWJ6ek1DTEtadkNndXFIWlYKK0gwQkFQZndrWW5zcWtBVHppcGpIUE9Wd2FqMjUyT2pYNTl0eVdWb1dsNGQvSks1TWVua3dTVEhBZFZ4QjlxegpFUkpRaFhGVjlRS0JnRjQ0RFVBY1JLcXVYdEV0Rnc3bjFFYjhvTGNSK1lhUGZZbVlpRVBCM2ROd3RhcW5BTkJNCnBGYUhtMk5tbWd6aERmV25PTFZJdXBPR0I4dGlVa2swaEpPRkxwNXBoNWRMaHpCajZGQ3JCV3ZrZ0cyL29saGwKcWxiMzNlTzYyN24xRllkTEY2cnQ1VEg3UU8rdkJ3cnAxVERoTGdOOFo5WG8vQjEyeG40aXZjVHhBb0dBVnBXcwpnejBTVWxUNnREekhPc1JzM3pHUDlJb1VQWjNzdHdvQVo0THNFdVkyV3dmcExpNEUvcURKTS94OWlrdzVjVFU1CnJXOTBhMHkrLzNrbWQyYkp2T0JDN3RoTFR6VWVZNk1yeW42RUplaE5uZjAxYVZTa0svc1NmTlZSS25lZUlEQ3UKWERnRnE2Z1MwQVUzNFdoN1VsbDcvak9tV2UwZ1B0Tk5KZFlrdlFrQ2dZQkRweVhTS0NvWDRTUFEreEJ6Z2cwUQp5NmtvVU9OMnA3OE53QU4yY2NCV0Nqb2VvcjNqL3NoUmJaMHhKM3cwZElFdEFPQTBZNEF6NW43aFBkK0ZON2pLCjYyallnOHVGR2phRGYzNEJKUm5YSjJHUDR4RlpmT3hRQTcxWllPUEoxNzVWRWhhdEMrTUhjN3RWekVuQW1hTUIKcEEweHY4MnROejFoMzhxdFMwVkhEZz09Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+      JWT_PUBLIC_KEY_BASE64: LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF0bW5RMm1yNXoyd0FVZHplUGR3cAo3VENDYXpXSHg5ZVJRQlE5THQvS2p6L3MwMlJhdGRMSjFpSTFDcVJoeUFBbVdqcE5YVVNVRVZ3VExjSG5DNEJTCjV1TDNoaUJhWTBYYzNMbmNRVFo3M0JrSUtEaHErcHlkWitDamtlU05wZk5veFpVUkZwZHNJbHdMckNFb29WNGEKZi9WTlJEYWp0TGYwbDFHNVUwNUZkR1gwN1d5Y1dzME9UdjA0QnlsT1ZHaENEQnNzT1BiWGh3WXdTYmM4aUtuWgoyM3J6NHUzWGJhZFV1WU5yY1NoM0FMUU92dVpKVitrMXV6d2RSam4zRXIrREt5WkdCaVN1ZytZVlhGNktNNGo4CmVGNXRmUWhRQis4R1FPUU9XVVkxc3d3eURlbm1GbnFZdEsvK0JtVmxJZnBHQ0F5WTNFZHdPZDFkUll5L1E5cHUKM1FJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==
+      JWT_KEY_ID: m1-auth-key-v1
+      JWT_ISSUER: https://lurnkode.local/m1
+      JWT_AUDIENCE: lurnkode-api
+      JWT_ACCESS_TOKEN_TTL: 900
+      JWT_REFRESH_TOKEN_TTL: 604800
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - lurnkode-network
 
-  # 4. Phân hệ Frontend Web UI (M5)
+  # 4. Phân hệ Frontend Web UI (M5 - Next.js)
   ui:
     container_name: lurnkode-ui
     build:
-      context: ./apps/web
+      context: ./apps/web/lurnkode-ui
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    restart: unless-stopped
+    # Ánh xạ 3001:3000 để tránh xung đột nếu cổng 3000 đang được dùng bởi container khác trên máy
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      INTERNAL_API_URL: http://api:8000
     depends_on:
       - api
     networks:

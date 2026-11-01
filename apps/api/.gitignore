@@ -1,0 +1,22 @@
+# Dependencies and generated output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+keys/
+*.pem
+*.key
+*.p12
+
+# Logs and editor/OS files
+*.log
+logs/
+.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db

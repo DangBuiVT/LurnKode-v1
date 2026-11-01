@@ -1,0 +1,4 @@
+# Drizzle migrations
+# File này giữ thư mục migrations trong git.
+# Các file migration SQL được tạo tự động bằng: bun run db:generate
+
