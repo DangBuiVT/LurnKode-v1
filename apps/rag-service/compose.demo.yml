@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: rag_demo_local
+      POSTGRES_DB: m4_rag_demo
+    ports:
+      - "127.0.0.1:55435:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d m4_rag_demo"]
+      interval: 2s
+      timeout: 3s
+      retries: 15

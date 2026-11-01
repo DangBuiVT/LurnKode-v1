@@ -1,4 +1,4 @@
-import { and, asc, cosineDistance, eq, gte, sql } from "drizzle-orm";
+import { and, asc, desc, cosineDistance, eq, getTableColumns, gte, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { VectorStore, SourceState } from "../../services/ports/vectorStore.ts";
 import type { IndexedChunk } from "../../domain/chunk.ts";
@@ -224,25 +224,30 @@ export class PgVectorStore implements VectorStore {
     const distance = cosineDistance(chunks.embedding, vector);
     const score = sql<number>`1 - (${distance})`.mapWith(Number);
 
-    const rows = await this.db
-      .select({ chunk: chunks, score })
-      .from(chunks)
-      .innerJoin(sources, eq(sources.materialId, chunks.materialId))
-      .where(and(
-        eq(chunks.courseId, courseId),
-        eq(sources.courseId, courseId),
-        eq(sources.status, "indexed"),
-        eq(chunks.versionKey, sources.activeVersion),
-        eq(sources.embeddingModel, this.profile.model),
-        eq(sources.embeddingDimension, this.profile.dimension),
-        eq(sources.embeddingFormat, this.profile.taskFormatVersion),
-        eq(chunks.embeddingModel, this.profile.model),
-        eq(chunks.embeddingFormat, this.profile.taskFormatVersion),
-        gte(score, minScore),
-      ))
-      .orderBy(asc(distance), asc(chunks.id))
-      .limit(topK);
-
-    return rows.map(row => ({ ...toIndexedChunk(row.chunk), score: row.score }));
+    const rows = await this.db.transaction(async tx => {
+      await tx.execute(sql`set local hnsw.iterative_scan = 'strict_order'`);
+      const nearest = tx.$with("nearest").as(
+        tx.select({ ...getTableColumns(chunks), score: score.as("score") })
+          .from(chunks)
+          .innerJoin(sources, eq(sources.materialId, chunks.materialId))
+          .where(and(
+            eq(chunks.courseId, courseId),
+            eq(sources.courseId, courseId),
+            eq(sources.status, "indexed"),
+            eq(chunks.versionKey, sources.activeVersion),
+            eq(sources.embeddingModel, this.profile.model),
+            eq(sources.embeddingDimension, this.profile.dimension),
+            eq(sources.embeddingFormat, this.profile.taskFormatVersion),
+            eq(chunks.embeddingModel, this.profile.model),
+            eq(chunks.embeddingFormat, this.profile.taskFormatVersion),
+          ))
+          .orderBy(asc(distance))
+          .limit(topK),
+      );
+      return tx.with(nearest).select().from(nearest)
+        .where(gte(nearest.score, minScore))
+        .orderBy(desc(nearest.score), asc(nearest.id));
+    });
+    return rows.map(row => ({ ...toIndexedChunk(row), score: row.score }));
   }
 }

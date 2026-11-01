@@ -4,6 +4,10 @@ export interface Citation {
   location?: SourceLocation;
   chunkId: string;
   materialId: string;
+  courseId: string;
+  chapterId: string;
+  lessonId: string;
+  versionKey: string;
   fileName: string | null;
   headingPath: string;
   snippet: string;

@@ -40,6 +40,8 @@ CREATE TABLE m4_rag.rag_chunks (
   CHECK (start_offset >= 0 AND end_offset > start_offset)
 );
 CREATE INDEX chunk_course_source_version ON m4_rag.rag_chunks(course_id, material_id, version_key);
+CREATE INDEX chunk_embedding_hnsw ON m4_rag.rag_chunks
+USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
 
 CREATE FUNCTION m4_rag.reject_chunk_mutation() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN

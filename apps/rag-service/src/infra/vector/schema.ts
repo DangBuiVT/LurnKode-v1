@@ -48,4 +48,5 @@ export const ragChunks = m4.table("rag_chunks", {
   check("chunk_text_nonempty", sql`length(btrim(${table.text})) > 0`),
   check("chunk_vector_nonzero", sql`vector_norm(${table.embedding}) > 0`),
   index("chunk_course_source_version").on(table.courseId, table.materialId, table.versionKey),
+  index("chunk_embedding_hnsw").using("hnsw", table.embedding.op("vector_cosine_ops")).with({ m: 16, ef_construction: 64 }),
 ]).enableRLS();

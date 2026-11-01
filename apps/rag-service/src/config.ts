@@ -15,6 +15,13 @@ export const embeddingConfig = {
   taskFormatVersion: "gemini2-retrieval-v1",
 } as const;
 
+export const generationConfig = {
+  model: "gemini-3.5-flash-lite",
+  timeoutMs: 30_000,
+  maxOutputTokens: 2048,
+  maxContextCharacters: 30000,
+} as const;
+
 export interface RagConfig {
   topK: number;
   minScore: number;
@@ -29,13 +36,13 @@ export interface RagConfig {
 export function defaultRagConfig(): RagConfig {
   return {
     topK: 5,
-    minScore: 0.5,
+    minScore: 0.55,
     processing: { ...processingConfig, chunk: { ...processingConfig.chunk } },
     embeddingDim: embeddingConfig.dimension,
     embeddingModel: embeddingConfig.model,
     embeddingTaskFormatVersion: embeddingConfig.taskFormatVersion,
     parserVersion: "utf8-lf-v1",
-    chunkerVersion: "markdown-heading-offset-v1",
+    chunkerVersion: "markdown-heading-body-offset-v2",
   };
 }
 

@@ -1,13 +1,25 @@
 import type { RagConfig } from "../config.ts";
 import type { Rating, StoredConversation, StoredMessage, TutorReply } from "../domain/conversation.ts";
-import type { Citation, CitationSource } from "../domain/citation.ts";
-import type { SearchHit } from "../domain/retrieval.ts";
+import type { CitationSource } from "../domain/citation.ts";
 import type { ChatDependencies, ChatService } from "./ports/serviceContracts.ts";
-import { NotImplemented } from "../domain/errors.ts";
+import { AccessDenied, MissingResource, NotImplemented } from "../domain/errors.ts";
+import { validateExternalId } from "./validation.ts";
+import { answerCourseQuestion } from "./answerService.ts";
+import { createRetrievalService } from "./retrievalService.ts";
+export { verifiedCitations } from "./answerService.ts";
 
 export function createChatService(ports: ChatDependencies, config: RagConfig): ChatService {
-  // TODO: Bind các hàm nghiệp vụ với dependencies, không đưa repository ra HTTP layer.
-  throw new NotImplemented("createChatService");
+  const snapshot = { ...config };
+  return {
+    listConversations: learnerId => listConversations(ports, learnerId),
+    createConversation: (learnerId, courseId, title) => createConversation(ports, learnerId, courseId, title),
+    ownedConversation: (learnerId, conversationId) => ownedConversation(ports, learnerId, conversationId),
+    archiveConversation: (learnerId, conversationId) => archiveConversation(ports, learnerId, conversationId),
+    listConversationMessages: (learnerId, conversationId) => listConversationMessages(ports, learnerId, conversationId),
+    answerQuestion: input => answerQuestion(input, ports, snapshot),
+    rateAnswer: (learnerId, messageId, rating) => rateAnswer(ports, learnerId, messageId, rating),
+    getCitationSource: (learnerId, messageId, chunkId) => getCitationSource(ports, learnerId, messageId, chunkId),
+  };
 }
 export async function listConversations(ports: ChatDependencies, learnerId: string): Promise<StoredConversation[]> {
   // TODO: Chỉ đọc hội thoại của learner đã xác thực; thêm pagination.
@@ -19,8 +31,14 @@ export async function createConversation(ports: ChatDependencies, learnerId: str
   throw new NotImplemented("createConversation");
 }
 export async function ownedConversation(ports: ChatDependencies, learnerId: string, conversationId: string): Promise<StoredConversation> {
-  // TODO: Không tồn tại/archived/khác owner -> MissingResource; mất quyền -> AccessDenied.
-  throw new NotImplemented("ownedConversation");
+  const learner = validateExternalId(learnerId);
+  const id = validateExternalId(conversationId);
+  const conversation = await ports.conversations.get(id);
+  if (!conversation || conversation.id !== id || conversation.archived || conversation.learnerId !== learner) {
+    throw new MissingResource();
+  }
+  if (!await ports.access.canAskCourse(learner, conversation.courseId)) throw new AccessDenied();
+  return conversation;
 }
 export async function archiveConversation(ports: ChatDependencies, learnerId: string, conversationId: string): Promise<void> {
   // TODO: Kiểm tra ownership và quyền course trước khi archive theo retention policy.
@@ -32,13 +50,14 @@ export async function listConversationMessages(ports: ChatDependencies, learnerI
 }
 
 export async function answerQuestion(input: { learnerId: string; conversationId: string; question: string }, ports: ChatDependencies, config: RagConfig): Promise<TutorReply> {
-  // TODO: Kiểm tra câu hỏi; identity phải được xác thực server-side trước khi gọi.
-  // TODO: ownedConversation -> kiểm tra lại quyền course -> embed câu hỏi.
-  // TODO: Retrieval chỉ trong authorized course và active source version.
-  // TODO: Không đủ bằng chứng -> out_of_scope, citations=[]; vẫn lưu refusal.
-  // TODO: Cô lập nội dung không tin cậy trong prompt, gọi generator qua port.
-  // TODO: Kiểm tra citation; lưu user+assistant+citations atomically qua saveExchange.
-  throw new NotImplemented("answerQuestion");
+  const conversation = await ownedConversation(ports, input.learnerId, input.conversationId);
+  const result = await answerCourseQuestion({ learnerId: input.learnerId, courseId: conversation.courseId, question: input.question }, {
+    retrieval: createRetrievalService(ports, config), generator: ports.generator,
+  });
+  return ports.conversations.saveExchange({
+    conversationId: conversation.id, question: result.question, answer: result.answer,
+    status: result.status, citations: result.citations,
+  });
 }
 
 export async function rateAnswer(ports: ChatDependencies, learnerId: string, messageId: string, rating: Rating): Promise<void> {
@@ -53,11 +72,4 @@ export async function getCitationSource(ports: ChatDependencies, learnerId: stri
   // TODO: Xác nhận chunkId nằm trong citations của message.
   // TODO: Đọc chunk lịch sử, trả text và metadata.
   throw new NotImplemented("getCitationSource");
-}
-
-export function verifiedCitations(hits: readonly SearchHit[], claimedIds: readonly string[]): Citation[] | null {
-  // TODO: Loại ID trùng; trả null nếu không có ID hoặc bất kỳ ID nào ngoài hits.
-  // TODO: Dựng citation từ metadata của retrieved chunks, gồm location nếu có.
-  // TODO: Không tin URL/metadata LLM tự tạo. ID hợp lệ chưa chứng minh groundedness.
-  throw new NotImplemented("verifiedCitations");
 }

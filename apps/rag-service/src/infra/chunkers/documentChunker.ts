@@ -148,9 +148,7 @@ export function chunkMarkdown(markdown: string, options: ChunkOptions = processi
         .filter(title => title.length >0) 
         .join(" > ");
       
-      currentLines = [line];
-      currentStart = lineStart;
-      currentEnd = lineEnd;
+      currentLines = [];
       
       continue;
     }
