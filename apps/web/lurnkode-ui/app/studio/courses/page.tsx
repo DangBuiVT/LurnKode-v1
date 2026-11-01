@@ -34,7 +34,7 @@ export default function StudioCoursesPage() {
   useEffect(() => {
     if (isAuthLoading) return;
     if (!user) {
-      router.replace("/login");
+      router.replace("/auth/login");
       return;
     }
     if (user.role === "Learner") {

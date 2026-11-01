@@ -21,7 +21,7 @@ export default function LearnPage() {
       if (isAuthLoading) return;
 
       if (!isAuthenticated) {
-        router.replace("/login?redirect=/learn");
+        router.replace("/auth/login?redirect=/learn");
         return;
       }
 

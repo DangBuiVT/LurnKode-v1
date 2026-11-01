@@ -215,7 +215,7 @@ export default function CourseCatalogPage() {
 
   const handleEnroll = async (courseId: string) => {
     if (!isAuthenticated) {
-      router.push(`/login?redirect=/course/catalog`);
+      router.push(`/auth/login?redirect=/course/catalog`);
       return;
     }
 
@@ -249,7 +249,7 @@ export default function CourseCatalogPage() {
 
   const handleOpenLeave = (courseId: string) => {
     if (!isAuthenticated) {
-      router.push(`/login?redirect=/course/catalog`);
+      router.push(`/auth/login?redirect=/course/catalog`);
       return;
     }
     const target = courses.find((c) => c.id === courseId);

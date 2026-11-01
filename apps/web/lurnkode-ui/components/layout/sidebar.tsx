@@ -29,7 +29,7 @@ export function Sidebar() {
       e.preventDefault();
 
       if (!isAuthenticated) {
-        router.push("/login?redirect=/learn");
+        router.push("/auth/login?redirect=/learn");
         return;
       }
 

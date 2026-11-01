@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
+import { getDefaultRouteForRole, getSafeRedirectTarget } from "@/lib/auth-routing";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,11 +32,9 @@ export default function LoginPage() {
     setErrorMsg(null);
     try {
       const loggedUser = await login({ email: email.trim(), password });
-      if (loggedUser.role === "Instructor" || loggedUser.role === "Admin") {
-        router.push("/studio/courses");
-      } else {
-        router.push("/course/catalog");
-      }
+      const requestedTarget = new URLSearchParams(window.location.search).get("redirect");
+      const returnTo = getSafeRedirectTarget(requestedTarget, loggedUser.role);
+      router.replace(returnTo ?? getDefaultRouteForRole(loggedUser.role));
     } catch (err: unknown) {
       const msg =
         err instanceof Error
@@ -151,7 +150,7 @@ export default function LoginPage() {
         <div className="mt-6 border-t border-border pt-4 text-center text-xs text-muted-foreground">
           Don&apos;t have an account?{" "}
           <Link
-            href="/register"
+            href="/auth/register"
             className="font-semibold text-primary underline underline-offset-4 hover:opacity-90"
           >
             Create an account

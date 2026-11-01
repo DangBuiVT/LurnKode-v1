@@ -34,7 +34,7 @@ export function UserMenu() {
   if (!user) {
     return (
       <div className="flex items-center gap-2">
-        <Link href="/login">
+        <Link href="/auth/login">
           <Button
             variant="ghost"
             size="sm"
@@ -44,7 +44,7 @@ export function UserMenu() {
             <span>Sign In</span>
           </Button>
         </Link>
-        <Link href="/register">
+        <Link href="/auth/register">
           <Button
             size="sm"
             className="gap-1.5 text-xs font-semibold bg-primary text-primary-foreground shadow-2xs"
@@ -68,7 +68,7 @@ export function UserMenu() {
   const handleLogout = async () => {
     setIsOpen(false);
     await logout();
-    router.push("/course/catalog");
+    router.replace("/auth/login");
   };
 
   const isInstructor = user.role === "Instructor";

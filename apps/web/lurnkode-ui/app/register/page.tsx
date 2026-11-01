@@ -49,7 +49,7 @@ export default function RegisterPage() {
         email: email.trim().toLowerCase(),
         password,
       });
-      router.push("/course/catalog");
+      router.replace("/course/catalog");
     } catch (err: unknown) {
       const msg =
         err instanceof Error
@@ -202,7 +202,7 @@ export default function RegisterPage() {
         <div className="mt-6 border-t border-border pt-4 text-center text-xs text-muted-foreground">
           Already have an account?{" "}
           <Link
-            href="/login"
+            href="/auth/login"
             className="font-semibold text-primary underline underline-offset-4 hover:opacity-90"
           >
             Sign in

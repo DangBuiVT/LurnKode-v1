@@ -42,8 +42,17 @@ export const authApi = {
   /**
    * Lấy thông tin định danh caller hiện tại từ M1
    */
-  async me(): Promise<{ userId: string; role: string; user?: ApiUser }> {
-    return apiClient<{ userId: string; role: string; user?: ApiUser }>("/api/v1/auth/me");
+  async me(): Promise<{ userId: string; role: string; user: ApiUser }> {
+    const identity = await apiClient<{ userId: string; role: string }>(
+      "/api/v1/auth/me",
+    );
+    const user = await apiClient<ApiUser>("/api/v1/users/me");
+
+    if (user.id !== identity.userId || user.role !== identity.role) {
+      throw new Error("Authenticated identity does not match the user profile.");
+    }
+
+    return { ...identity, user };
   },
 
   /**

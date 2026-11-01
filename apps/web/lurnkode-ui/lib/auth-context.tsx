@@ -2,50 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { authApi } from "./api/auth";
-import { ApiUser, LoginPayload, RegisterPayload, UserRole } from "./api/types";
-import { getStoredToken, clearStoredToken } from "./api/client";
-
-export interface DemoAccount {
-  email: string;
-  name: string;
-  role: UserRole;
-  description: string;
-}
-
-export const DEMO_ACCOUNTS: DemoAccount[] = [
-  {
-    email: "toan.nguyen@lurnkode.edu",
-    name: "Dr. Toan Nguyen",
-    role: "Instructor",
-    description: "Instructor for Data Structures & AI RAG",
-  },
-  {
-    email: "nam.le@lurnkode.edu",
-    name: "Prof. Nam Le",
-    role: "Instructor",
-    description: "Instructor for Modern Web Development",
-  },
-  {
-    email: "khoa.tran@lurnkode.edu",
-    name: "Dr. Khoa Tran",
-    role: "Instructor",
-    description: "Instructor for Advanced Database Systems",
-  },
-  {
-    email: "learner@lurnkode.edu",
-    name: "John Learner",
-    role: "Learner",
-    description: "Standard student account for learning and exercises",
-  },
-  {
-    email: "admin@lurnkode.edu",
-    name: "System Administrator",
-    role: "Admin",
-    description: "Full system administration and user management",
-  },
-];
-
-export const DEFAULT_DEMO_PASSWORD = "Password123!@#";
+import { ApiUser, LoginPayload, RegisterPayload } from "./api/types";
+import { clearStoredToken, getStoredToken } from "./api/client";
 
 interface AuthContextType {
   user: ApiUser | null;
@@ -54,7 +12,6 @@ interface AuthContextType {
   login: (payload: LoginPayload) => Promise<ApiUser>;
   register: (payload: RegisterPayload) => Promise<ApiUser>;
   logout: () => Promise<void>;
-  loginWithDemoAccount: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -63,41 +20,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<ApiUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize auth state from token & /api/v1/auth/me
   useEffect(() => {
     let mounted = true;
     const token = getStoredToken();
 
     if (!token) {
-      queueMicrotask(() => {
-        if (mounted) setIsLoading(false);
-      });
-      return;
+      setIsLoading(false);
+      return () => {
+        mounted = false;
+      };
     }
 
-    authApi
-      .me()
-      .then((res) => {
-        if (mounted && res) {
-          const apiUser: ApiUser = res.user || {
-            id: res.userId,
-            email: "user@lurnkode.edu",
-            fullName: res.role === "Instructor" ? "Instructor" : "Learner",
-            role: res.role as UserRole,
-            status: "active",
-          };
-          setUser(apiUser);
+    const restoreSession = async () => {
+      try {
+        const identity = await authApi.me();
+        if (mounted) setUser(identity.user);
+      } catch {
+        try {
+          await authApi.refresh();
+          const identity = await authApi.me();
+          if (mounted) setUser(identity.user);
+        } catch {
+          if (mounted) {
+            clearStoredToken();
+            setUser(null);
+          }
         }
-      })
-      .catch(() => {
-        if (mounted) {
-          clearStoredToken();
-          setUser(null);
-        }
-      })
-      .finally(() => {
+      } finally {
         if (mounted) setIsLoading(false);
-      });
+      }
+    };
+
+    void restoreSession();
 
     return () => {
       mounted = false;
@@ -108,15 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       const res = await authApi.login(payload);
-      const apiUser: ApiUser = res.user || {
-        id: res.userId,
-        email: payload.email,
-        fullName: res.role === "Instructor" ? "Instructor" : "Learner",
-        role: res.role,
-        status: "active",
-      };
-      setUser(apiUser);
-      return apiUser;
+      if (!res.user) throw new Error("Login response did not include a user profile.");
+      setUser(res.user);
+      return res.user;
     } finally {
       setIsLoading(false);
     }
@@ -126,15 +74,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       const res = await authApi.register(payload);
-      const apiUser: ApiUser = res.user || {
-        id: res.userId,
-        email: payload.email,
-        fullName: payload.fullName,
-        role: res.role,
-        status: "active",
-      };
-      setUser(apiUser);
-      return apiUser;
+      if (!res.user) throw new Error("Registration response did not include a user profile.");
+      setUser(res.user);
+      return res.user;
     } finally {
       setIsLoading(false);
     }
@@ -152,27 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const loginWithDemoAccount = useCallback(
-    async (email: string) => {
-      await login({
-        email,
-        password: DEFAULT_DEMO_PASSWORD,
-      });
-    },
-    [login]
-  );
-
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: Boolean(user),
-        isLoading,
-        login,
-        register,
-        logout,
-        loginWithDemoAccount,
-      }}
+      value={{ user, isAuthenticated: Boolean(user), isLoading, login, register, logout }}
     >
       {children}
     </AuthContext.Provider>
@@ -181,8 +105,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }

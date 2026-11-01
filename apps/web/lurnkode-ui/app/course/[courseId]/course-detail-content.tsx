@@ -130,7 +130,7 @@ export function CourseDetailContent({ course }: CourseDetailContentProps) {
 
   const handleSelectLesson = (lesson: Lesson) => {
     if (!isAuthenticated) {
-      router.push(`/login?redirect=/course/${course.id}`);
+      router.push(`/auth/login?redirect=/course/${course.id}`);
       return;
     }
 
@@ -151,7 +151,7 @@ export function CourseDetailContent({ course }: CourseDetailContentProps) {
 
   const handleEnroll = async () => {
     if (!isAuthenticated) {
-      router.push(`/login?redirect=/course/${course.id}`);
+      router.push(`/auth/login?redirect=/course/${course.id}`);
       return;
     }
 
