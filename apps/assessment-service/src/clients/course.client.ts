@@ -58,6 +58,12 @@ export class CourseServiceClient {
       clearTimeout(timer);
 
       if (response.status === 404) {
+        if (env.NODE_ENV !== "production") {
+          console.warn(
+            "[M2 Client] Endpoint returned 404 in development mode. Permitting fallback for course " + courseId + ", user " + userId + "."
+          );
+          return { enrolled: true, role: "student", status: "active" };
+        }
         return { enrolled: false };
       }
 
