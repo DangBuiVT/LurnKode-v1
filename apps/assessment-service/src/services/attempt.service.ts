@@ -244,6 +244,25 @@ export class AttemptService {
    *   sum(MCQ answer scores) + sum(latest judged programming submission per item).
    * Scores are rounded to 2 decimal places.
    */
+
+  async getAttempt(
+    attemptId: string,
+    userId: string
+  ): Promise<Attempt & { answers: Answer[]; codeSubmissions: CodeSubmission[] }> {
+    const attempt = await this.repo.findAttemptById(attemptId);
+    if (!attempt) {
+      throw new ServiceError(404, "ATTEMPT_NOT_FOUND", "Attempt not found");
+    }
+    if (attempt.userId !== userId) {
+      throw new ServiceError(403, "ATTEMPT_FORBIDDEN", "Unauthorized access to attempt");
+    }
+    const [answers, codeSubmissions] = await Promise.all([
+      this.repo.listAnswersByAttemptId(attemptId),
+      this.repo.listCodeSubmissionsByAttemptId(attemptId),
+    ]);
+    return { ...attempt, answers, codeSubmissions };
+  }
+
   async recalculateAttemptScore(attemptId: string): Promise<Attempt | null> {
     const attempt = await this.repo.findAttemptById(attemptId);
     if (!attempt) return null;

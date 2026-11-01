@@ -32,6 +32,10 @@ export class AssessmentService {
     return this.repo.listAssessmentsByCourse(courseId);
   }
 
+  async listItems(assessmentId: string): Promise<AssessmentItem[]> {
+    return this.repo.listItemsByAssessmentId(assessmentId);
+  }
+
   async addItem(
     assessmentId: string,
     input: CreateAssessmentItemInput & { id?: string }

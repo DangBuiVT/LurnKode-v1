@@ -40,7 +40,8 @@ export const instructorRoutes = new Elysia({ prefix: "/instructor/assessments" }
         set.status = 404;
         return { error: "Assessment not found" };
       }
-      return assessment;
+      const items = await assessmentService.listItems(id);
+      return { ...assessment, items };
     } catch (err: unknown) {
       return handleRouteError(err, set);
     }

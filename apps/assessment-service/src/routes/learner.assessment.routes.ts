@@ -11,6 +11,7 @@ import { Elysia } from "elysia";
 import { attemptService } from "../services/attempt.service";
 import { assessmentService } from "../services/assessment.service";
 import { submitMcqAnswerSchema, submitCodeSchema } from "../schemas/assessment.zod";
+import { mapItemForLearner } from "../mappers/assessment.mapper";
 import { requireRole } from "../middlewares/auth.middleware";
 import { handleRouteError } from "../middlewares/error.middleware";
 
@@ -26,7 +27,16 @@ export const learnerRoutes = new Elysia({ prefix: "/learner" })
       set.status = 404;
       return { error: "Assessment not found" };
     }
-    return assessment;
+    const items = await assessmentService.listItems(id);
+    return { ...assessment, items: items.map(mapItemForLearner) };
+  })
+  .get("/attempts/:attemptId", async ({ params: { attemptId }, headers, set }) => {
+    try {
+      const user = requireRole(headers, LEARNER_ROLES);
+      return await attemptService.getAttempt(attemptId, user.userId);
+    } catch (err: unknown) {
+      return handleRouteError(err, set);
+    }
   })
   .post("/assessments/:id/attempts", async ({ params: { id }, headers, set }) => {
     try {
