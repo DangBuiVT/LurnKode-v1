@@ -61,6 +61,23 @@ export async function insert(userRecord: NewUser): Promise<User> {
   return created;
 }
 
+export async function insertFirstAdmin(userRecord: NewUser): Promise<
+  { kind: "created"; user: PublicUser } | { kind: "already_exists" }
+> {
+  return db.transaction(async (transaction) => {
+    await transaction.execute(sql`SELECT pg_advisory_xact_lock(641907321)`);
+    const [existingAdmin] = await transaction.select({ id: users.id })
+      .from(users)
+      .where(eq(users.role, "Admin"))
+      .limit(1);
+    if (existingAdmin) return { kind: "already_exists" };
+
+    const [created] = await transaction.insert(users).values(userRecord).returning(publicColumns);
+    if (!created) throw new Error("First Admin insert did not return a user");
+    return { kind: "created", user: asPublicUser(created) };
+  });
+}
+
 export type ProfilePatch = Partial<Pick<User, "email" | "fullName" | "avatarUrl">>;
 
 export async function updateProfile(userId: string, patch: ProfilePatch): Promise<PublicUser | undefined> {
@@ -143,5 +160,11 @@ export async function updatePasswordAndRevokeSessions(userId: string, passwordHa
 export async function countActiveAdmins(): Promise<number> {
   const [result] = await db.select({ value: count() }).from(users)
     .where(and(eq(users.role, "Admin"), eq(users.status, "active")));
+  return result?.value ?? 0;
+}
+
+export async function countAdminAccounts(): Promise<number> {
+  const [result] = await db.select({ value: count() }).from(users)
+    .where(eq(users.role, "Admin"));
   return result?.value ?? 0;
 }

@@ -4,7 +4,7 @@ import type { UserListFilters } from "../repositories/user.repository";
 import type { PaginationParams } from "../utils/pagination";
 import { HttpError } from "../utils/http-error";
 
-function hashPassword(password: string): Promise<string> {
+export function hashPasswordWithM1(password: string): Promise<string> {
   return Bun.password.hash(password, { algorithm: "argon2id" });
 }
 
@@ -59,7 +59,7 @@ export async function createManagedUser(
     const created = await userRepository.insert({
       email: input.email.trim().toLowerCase(),
       fullName: input.fullName.trim(),
-      passwordHash: await hashPassword(input.password),
+      passwordHash: await hashPasswordWithM1(input.password),
       role: input.role,
       status: "active",
     });
@@ -69,6 +69,33 @@ export async function createManagedUser(
   } catch (error) {
     normalizeConflict(error);
   }
+}
+
+export async function bootstrapFirstAdmin(input: { email: string; fullName: string; password: string }) {
+  let passwordHash: string;
+  try {
+    passwordHash = await hashPasswordWithM1(input.password);
+  } catch {
+    throw new HttpError(500, "ADMIN_BOOTSTRAP_FAILED", "Admin password hashing failed; no database write was made");
+  }
+
+  let result: Awaited<ReturnType<typeof userRepository.insertFirstAdmin>>;
+  try {
+    result = await userRepository.insertFirstAdmin({
+      email: input.email.trim().toLowerCase(),
+      fullName: input.fullName.trim(),
+      passwordHash,
+      role: UserRole.Admin,
+      status: "active",
+    });
+  } catch {
+    // Drizzle query errors may include bound SQL parameters; never expose them to the CLI.
+    throw new HttpError(500, "ADMIN_BOOTSTRAP_FAILED", "Admin bootstrap failed; the transaction was rolled back");
+  }
+  if (result.kind === "already_exists") {
+    throw new HttpError(409, "ADMIN_ALREADY_EXISTS", "An Admin account already exists; bootstrap is one-time only");
+  }
+  return result.user;
 }
 
 export async function updateUserProfile(adminId: string, userId: string, patch: userRepository.ProfilePatch) {
