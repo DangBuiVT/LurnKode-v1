@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { closeDatabaseConnection } from "../src/db";
 import * as userRepository from "../src/repositories/user.repository";
 import { bootstrapFirstAdmin } from "../src/services/user.service";
-import { validateAdminBootstrapTarget, validateLocalComposeDatabase } from "../src/scripts/admin-bootstrap-guard";
+import { validateAdminBootstrapTarget, validateLocalComposeDatabaseInspection } from "../src/scripts/admin-bootstrap-guard";
 
 const CONFIRM_FLAG = "--confirm-local-dev";
 const CONFIRM_PHRASE = "BOOTSTRAP FIRST ADMIN";
@@ -31,22 +31,15 @@ function assertWorkspaceDockerContext(): void {
 
 function assertLocalComposeDatabase(targetPort: number): void {
   assertWorkspaceDockerContext();
+  let inspectionJson: string;
   try {
-    const output = execFileSync("docker", [
-      "inspect", "--format", "{{json .Config.Labels}}|{{json .Config.Env}}|{{json .Mounts}}|{{json .NetworkSettings.Ports}}", "lurnkode-postgres",
+    inspectionJson = execFileSync("docker", [
+      "inspect", "--format", "{{json .}}", "lurnkode-postgres",
     ], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-    const [labelsText, environmentText, mountsText, portsText] = output.split("|");
-    validateLocalComposeDatabase(
-      JSON.parse(labelsText || "{}"),
-      JSON.parse(environmentText || "[]"),
-      JSON.parse(mountsText || "[]"),
-      JSON.parse(portsText || "{}"),
-      repositoryRoot,
-      targetPort,
-    );
   } catch {
     throw new Error("Could not verify this workspace's local lurnkode PostgreSQL Compose service; Admin bootstrap was stopped.");
   }
+  validateLocalComposeDatabaseInspection(inspectionJson, repositoryRoot, targetPort);
 }
 
 async function readLine(prompt: string): Promise<string> {

@@ -62,12 +62,46 @@ export function validateLocalComposeDatabase(
   const publishedPorts = portBindings["5432/tcp"] ?? [];
   const hasExpectedPort = publishedPorts.some((binding) => Number(binding.HostPort) === targetPort);
 
-  if (
-    labels["com.docker.compose.project"] !== "lurnkode" ||
-    labels["com.docker.compose.service"] !== "postgres" ||
-    !projectDirectory || normalizePath(projectDirectory) !== normalizePath(repositoryRoot) ||
-    !hasExpectedComposeFile || configuredDatabase !== DATABASE_NAME || !hasExpectedVolume || !hasExpectedPort
-  ) {
-    throw new Error("Docker metadata does not identify this workspace's local lurnkode PostgreSQL service and database.");
+  if (labels["com.docker.compose.project"] !== "lurnkode") throw new Error("Docker Compose project must be lurnkode.");
+  if (labels["com.docker.compose.service"] !== "postgres") throw new Error("Docker Compose service must be postgres.");
+  if (!projectDirectory || normalizePath(projectDirectory) !== normalizePath(repositoryRoot)) {
+    throw new Error("Docker Compose working directory does not match this workspace.");
   }
+  if (!hasExpectedComposeFile) throw new Error("Docker Compose config file does not match this workspace.");
+  if (configuredDatabase !== DATABASE_NAME) throw new Error(`Docker PostgreSQL service must use database ${DATABASE_NAME}.`);
+  if (!hasExpectedVolume) throw new Error("Docker PostgreSQL service must use the expected lurnkode_postgres_data volume.");
+  if (!hasExpectedPort) throw new Error(`Published PostgreSQL port does not match DATABASE_URL port ${targetPort}.`);
+}
+
+interface LocalComposeInspection {
+  Config?: {
+    Labels?: Record<string, string>;
+    Env?: string[];
+  };
+  Mounts?: Array<{ Type: string; Name?: string; Destination: string }>;
+  NetworkSettings?: {
+    Ports?: Record<string, Array<{ HostIp: string; HostPort: string }> | null>;
+  };
+}
+
+export function validateLocalComposeDatabaseInspection(
+  inspectionJson: string,
+  repositoryRoot: string,
+  targetPort: number,
+): void {
+  let inspection: LocalComposeInspection;
+  try {
+    inspection = JSON.parse(inspectionJson) as LocalComposeInspection;
+  } catch {
+    throw new Error("Docker returned invalid PostgreSQL inspection JSON.");
+  }
+
+  validateLocalComposeDatabase(
+    inspection.Config?.Labels ?? {},
+    inspection.Config?.Env ?? [],
+    inspection.Mounts ?? [],
+    inspection.NetworkSettings?.Ports ?? {},
+    repositoryRoot,
+    targetPort,
+  );
 }
