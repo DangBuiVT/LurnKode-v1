@@ -6,7 +6,7 @@ import { EnrollmentParamSchema } from './enrollment.schema';
 
 export const enrollmentRoutes = new Elysia({ prefix: '/api/v1' })
   .use(authPlugin)
-  // TODO: Gắn 4 endpoints của Mục 6.2.2:
+  // TODO: Gắn 5 endpoints của Mục 6.2.2:
   // 1. POST /courses/:id/enroll      (Role: Learner, status 201)
   .post(
     '/courses/:id/enroll',
@@ -17,6 +17,17 @@ export const enrollmentRoutes = new Elysia({ prefix: '/api/v1' })
       return ok(enrollment);
     },
     {params: EnrollmentParamSchema}
+  )
+
+  //Bổ sung DELETE /courses/:id/enroll`
+  .delete(
+    '/courses/:id/enroll',
+    async ({ params, user, set }) => {
+      const authUser = requireRoles(user, ['Learner']);
+      await EnrollmentService.leaveCourse(params.id, authUser);
+      set.status = 204;
+    },
+    { params: EnrollmentParamSchema }
   )
 
   // 2. GET  /my/enrollments          (Role: Learner)

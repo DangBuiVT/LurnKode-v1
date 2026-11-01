@@ -146,4 +146,14 @@ export const EnrollmentService = {
     }
     return enrollment;
   },
+
+  // 5. DELETE /api/v1/courses/:id/enroll
+  async leaveCourse(courseId: string, user: AuthUser) {
+    const [enrollment] = await db
+      .select()
+      .from(enrollments)
+      .where(and(eq(enrollments.learnerId, user.id), eq(enrollments.courseId, courseId)));
+    if (!enrollment) throw Errors.Forbidden('NOT_ENROLLED','Learner is not enrolled in this course.');
+    await db.delete(enrollments).where(eq(enrollments.id, enrollment.id));
+  },
 };
