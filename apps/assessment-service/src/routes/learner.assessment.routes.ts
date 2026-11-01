@@ -9,6 +9,7 @@
 
 import { Elysia } from "elysia";
 import { attemptService } from "../services/attempt.service";
+import { assessmentService } from "../services/assessment.service";
 import { submitMcqAnswerSchema, submitCodeSchema } from "../schemas/assessment.zod";
 import { requireRole } from "../middlewares/auth.middleware";
 import { handleRouteError } from "../middlewares/error.middleware";
@@ -16,6 +17,17 @@ import { handleRouteError } from "../middlewares/error.middleware";
 const LEARNER_ROLES = ["learner", "student"] as const;
 
 export const learnerRoutes = new Elysia({ prefix: "/learner" })
+  .get("/assessments/course/:courseId", async ({ params: { courseId } }) => {
+    return await assessmentService.listAssessmentsByCourse(courseId);
+  })
+  .get("/assessments/:id", async ({ params: { id }, set }) => {
+    const assessment = await assessmentService.getAssessment(id);
+    if (!assessment) {
+      set.status = 404;
+      return { error: "Assessment not found" };
+    }
+    return assessment;
+  })
   .post("/assessments/:id/attempts", async ({ params: { id }, headers, set }) => {
     try {
       const user = requireRole(headers, LEARNER_ROLES);

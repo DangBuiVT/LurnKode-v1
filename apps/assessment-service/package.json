@@ -22,8 +22,9 @@
     "typescript": "^7"
   },
   "dependencies": {
-    "elysia": "^1.2.25",
+    "@elysiajs/cors": "^1.4.2",
     "drizzle-orm": "^0.38.4",
+    "elysia": "^1.2.25",
     "zod": "^4.6.5"
   }
 }

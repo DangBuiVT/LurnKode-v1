@@ -7,6 +7,7 @@
  */
 
 import { Elysia } from "elysia";
+import { cors } from "@elysiajs/cors";
 import { ServiceError } from "./middlewares/error.middleware";
 import { healthRoutes } from "./routes/health.routes";
 import { instructorRoutes } from "./routes/instructor.assessment.routes";
@@ -14,6 +15,7 @@ import { learnerRoutes } from "./routes/learner.assessment.routes";
 import { internalJudgeRoutes } from "./routes/internal.judge.routes";
 
 export const app = new Elysia()
+  .use(cors())
   .use(healthRoutes)
   .use(instructorRoutes)
   .use(learnerRoutes)
