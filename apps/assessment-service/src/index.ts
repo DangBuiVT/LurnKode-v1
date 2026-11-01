@@ -39,4 +39,3 @@ if (env.NODE_ENV !== "production") {
 }
 
 export type { App } from "./app";
-export default app;
