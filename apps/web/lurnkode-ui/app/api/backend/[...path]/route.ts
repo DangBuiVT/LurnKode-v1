@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 const HOP_BY_HOP_HEADERS = [
   "connection",
   "content-length",
+  "content-encoding",
   "keep-alive",
   "proxy-authenticate",
   "proxy-authorization",
@@ -19,7 +20,13 @@ async function proxyRequest(
   const backendUrl = process.env.API_URL?.replace(/\/+$/, "");
   if (!backendUrl) {
     return Response.json(
-      { success: false, error: { code: "API_URL_NOT_CONFIGURED", message: "Backend API is not configured" } },
+      {
+        success: false,
+        error: {
+          code: "API_URL_NOT_CONFIGURED",
+          message: "Backend API is not configured",
+        },
+      },
       { status: 503 },
     );
   }
@@ -31,13 +38,19 @@ async function proxyRequest(
   const headers = new Headers(request.headers);
   for (const header of HOP_BY_HOP_HEADERS) headers.delete(header);
   headers.delete("host");
+  headers.delete("accept-encoding");
 
   const upstreamResponse = await fetch(targetUrl, {
     method: request.method,
     headers,
-    body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
+    body:
+      request.method === "GET" || request.method === "HEAD"
+        ? undefined
+        : request.body,
     redirect: "manual",
-    ...(request.method === "GET" || request.method === "HEAD" ? {} : { duplex: "half" as const }),
+    ...(request.method === "GET" || request.method === "HEAD"
+      ? {}
+      : { duplex: "half" as const }),
   });
 
   const responseHeaders = new Headers(upstreamResponse.headers);
@@ -52,10 +65,17 @@ async function proxyRequest(
 
 type RouteContext = { params: Promise<{ path: string[] }> };
 
-export const GET = (request: NextRequest, context: RouteContext) => proxyRequest(request, context);
-export const HEAD = (request: NextRequest, context: RouteContext) => proxyRequest(request, context);
-export const POST = (request: NextRequest, context: RouteContext) => proxyRequest(request, context);
-export const PUT = (request: NextRequest, context: RouteContext) => proxyRequest(request, context);
-export const PATCH = (request: NextRequest, context: RouteContext) => proxyRequest(request, context);
-export const DELETE = (request: NextRequest, context: RouteContext) => proxyRequest(request, context);
-export const OPTIONS = (request: NextRequest, context: RouteContext) => proxyRequest(request, context);
+export const GET = (request: NextRequest, context: RouteContext) =>
+  proxyRequest(request, context);
+export const HEAD = (request: NextRequest, context: RouteContext) =>
+  proxyRequest(request, context);
+export const POST = (request: NextRequest, context: RouteContext) =>
+  proxyRequest(request, context);
+export const PUT = (request: NextRequest, context: RouteContext) =>
+  proxyRequest(request, context);
+export const PATCH = (request: NextRequest, context: RouteContext) =>
+  proxyRequest(request, context);
+export const DELETE = (request: NextRequest, context: RouteContext) =>
+  proxyRequest(request, context);
+export const OPTIONS = (request: NextRequest, context: RouteContext) =>
+  proxyRequest(request, context);
