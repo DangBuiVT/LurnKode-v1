@@ -1,17 +1,11 @@
 import { ApiResponse } from "./types";
 
 export function getApiBaseUrl(): string {
-  if (typeof window === "undefined") {
-    return (
-      process.env.INTERNAL_API_URL?.replace(/\/+$/, "") ||
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
-      "http://localhost:8000"
-    );
-  }
-  return (
-    process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
-    "http://localhost:8000"
-  );
+  // Browser requests stay same-origin; the Next.js route handler forwards them
+  // to the backend using the server-only API_URL environment variable.
+  if (typeof window !== "undefined") return "/api/backend";
+
+  return process.env.API_URL?.replace(/\/+$/, "") || "http://localhost:8000";
 }
 
 export const API_BASE_URL = getApiBaseUrl();
