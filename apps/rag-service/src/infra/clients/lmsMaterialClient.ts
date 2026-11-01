@@ -5,7 +5,7 @@ import { validateExternalId, validateText } from "../../services/validation.ts";
 
 type MaterialTransport = (url: string, init: RequestInit) => Promise<Response>;
 
-export interface M2ClientOptions {
+export interface LmsMaterialClientOptions {
   baseUrl: string;
   internalKey: string;
   timeoutMs?: number;
@@ -49,12 +49,12 @@ function parseMaterialResponse(payload: unknown, requestedId: string): MaterialS
   }
 }
 
-export class M2MaterialClient implements MaterialClient {
+export class LmsMaterialClient implements MaterialClient {
   private readonly baseUrl: string;
   private readonly internalKey: string;
   private readonly timeoutMs: number;
 
-  constructor(options: M2ClientOptions, private readonly request: MaterialTransport = fetch) {
+  constructor(options: LmsMaterialClientOptions, private readonly request: MaterialTransport = fetch) {
     const url = new URL(options.baseUrl);
     if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
       throw new InvalidInput("M2 base URL must be an HTTP(S) URL without credentials, query or fragment");

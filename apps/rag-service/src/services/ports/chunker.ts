@@ -3,7 +3,6 @@ import type { TextChunk } from "../../domain/chunk.ts";
 import type { ProcessingConfig } from "../../config.ts";
 
 export type ChunkOptions = Readonly<ProcessingConfig["chunk"]>;
-/** Nhận text đã parse từ mọi định dạng; giữ vị trí nguồn trên các chunk. */
 export interface DocumentChunker {
   chunk(document: ParsedDocument): Promise<TextChunk[]>;
 }

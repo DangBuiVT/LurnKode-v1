@@ -1,6 +1,5 @@
 import { NotImplemented } from "./domain/errors.ts";
 
-// Giữ guard fail-closed. Chưa có adapters thật, không mở HTTP server.
 if (process.env.NODE_ENV === "production") throw new Error("Production adapters are not implemented");
 if (process.env.RAG_MODE !== "mock" || process.env.ALLOW_FAKE_PROVIDERS !== "true") {
   throw new Error("Startup guard requires RAG_MODE=mock and ALLOW_FAKE_PROVIDERS=true; implementation is still missing");

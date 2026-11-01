@@ -15,13 +15,17 @@ export function validateSearchQuery(
 ): RetrievalQuery & { vector: number[] } {
   const courseId = validateExternalId(query.courseId);
   const vector = validateAndNormalizeVector(query.vector, dimension);
-  if (!Number.isSafeInteger(query.topK) || query.topK < 1 || query.topK > 100) {
+  validateRetrievalOptions(query);
+  return { courseId, vector, topK: query.topK, minScore: query.minScore };
+}
+
+export function validateRetrievalOptions(options: { topK: number; minScore: number }): void {
+  if (!Number.isSafeInteger(options.topK) || options.topK < 1 || options.topK > 100) {
     throw new InvalidInput("topK must be between 1 and 100");
   }
-  if (!Number.isFinite(query.minScore) || query.minScore < -1 || query.minScore > 1) {
+  if (!Number.isFinite(options.minScore) || options.minScore < -1 || options.minScore > 1) {
     throw new InvalidInput("minScore must be between -1 and 1");
   }
-  return { courseId, vector, topK: query.topK, minScore: query.minScore };
 }
 
 export function validateExternalId(value: string): string {

@@ -1,4 +1,3 @@
-/** Lỗi dùng chung cho các bài tập chưa triển khai. */
 export class NotImplemented extends Error {
   constructor(feature: string) {
     super(`NotImplemented: ${feature}`);
@@ -15,7 +14,6 @@ export class SourceVersionConflict extends Error {
   constructor() { super("Source changed during indexing; fetch authoritative source again"); this.name = "SourceVersionConflict"; }
 }
 
-/** Lỗi placeholder cho adapter parser chưa triển khai. */
 export class ParserNotImplemented extends NotImplemented {
   constructor(format: string) { super(`parser ${format}`); }
 }

@@ -79,7 +79,6 @@ export function chunkMarkdown(markdown: string, options: ChunkOptions = processi
     nextOffset = lineEnd + 1;
     const blockMatch = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
 
-    //Đang ở trong code block
     if (openBlock != null) {
       currentLines.push(line);
       currentEnd = lineEnd;
@@ -105,7 +104,6 @@ export function chunkMarkdown(markdown: string, options: ChunkOptions = processi
       continue;
     }
 
-    //Bắt đầu code block
     if (blockMatch) {
       if (currentLines.length > 0) {
         blocks.push({
@@ -124,7 +122,6 @@ export function chunkMarkdown(markdown: string, options: ChunkOptions = processi
       continue;
     }
 
-    //Heading
     const headingMatch = line.match(/^ {0,3}(#{1,6})(?:[ \t]+(.*?)|[ \t]*)$/);
 
     if (headingMatch) {
@@ -158,7 +155,6 @@ export function chunkMarkdown(markdown: string, options: ChunkOptions = processi
       continue;
     }
 
-    //Paragraph
     if (line.trim() === "") {
       if (currentLines.length > 0) {
         blocks.push({
@@ -174,7 +170,6 @@ export function chunkMarkdown(markdown: string, options: ChunkOptions = processi
       continue;
     }
 
-    //Nội dung 
     if (currentLines.length === 0) currentStart = lineStart;
     currentLines.push(line);
     currentEnd = lineEnd;
@@ -186,7 +181,7 @@ export function chunkMarkdown(markdown: string, options: ChunkOptions = processi
       startOffset: currentStart,
       endOffset: currentEnd,
       headingPath: currentHeadingPath,
-      sectionId: currentSectionId    // Cắt từ nguồn để giữ đúng dòng trắng và offset giữa các paragraph.entSectionId,
+      sectionId: currentSectionId
     });
   }
 
@@ -217,7 +212,7 @@ export function chunkMarkdown(markdown: string, options: ChunkOptions = processi
       flushParagraphs();
       chunks.push({
         text: normalized.slice(block.startOffset, block.endOffset),
-        startOffset: block.startOffset,    // Cắt từ nguồn để giữ đúng dòng trắng và offset giữa các paragraph.
+        startOffset: block.startOffset,
         endOffset: block.endOffset,
         ordinal: chunks.length,
         headingPath: block.headingPath,

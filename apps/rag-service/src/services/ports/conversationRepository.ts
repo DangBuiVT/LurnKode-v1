@@ -8,7 +8,6 @@ export interface ConversationRepository {
   archive(id: string): Promise<void>;
   listMessages(conversationId: string): Promise<StoredMessage[]>;
   getMessage(messageId: string): Promise<StoredMessage | null>;
-  /** User + assistant + citations phải được lưu trong cùng transaction. */
   saveExchange(input: { conversationId: string; question: string; answer: string; status: AnswerStatus; citations: Citation[] }): Promise<TutorReply>;
   setRating(messageId: string, rating: Rating): Promise<void>;
 }

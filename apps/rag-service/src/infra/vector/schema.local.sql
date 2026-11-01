@@ -1,5 +1,3 @@
--- DRAFT: disposable M4 local/test databases only. Not a shared/production migration.
--- UUID references and ownership still require team agreement before integration.
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE SCHEMA m4_rag;
 
@@ -43,7 +41,6 @@ CREATE TABLE m4_rag.rag_chunks (
 );
 CREATE INDEX chunk_course_source_version ON m4_rag.rag_chunks(course_id, material_id, version_key);
 
--- Enforce immutable historical evidence even if a caller bypasses the adapter.
 CREATE FUNCTION m4_rag.reject_chunk_mutation() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   RAISE EXCEPTION 'Historical RAG chunks are immutable';
@@ -52,7 +49,6 @@ $$;
 CREATE TRIGGER immutable_chunks BEFORE UPDATE OR DELETE ON m4_rag.rag_chunks
 FOR EACH ROW EXECUTE FUNCTION m4_rag.reject_chunk_mutation();
 
--- Fail closed for unprivileged roles until a reviewed M1/M2 DB policy exists.
 ALTER TABLE m4_rag.rag_sources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE m4_rag.rag_chunks ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON SCHEMA m4_rag FROM PUBLIC;

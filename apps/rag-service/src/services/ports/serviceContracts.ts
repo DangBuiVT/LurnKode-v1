@@ -7,6 +7,16 @@ import type { EmbeddingProvider } from "./embeddingProvider.ts";
 import type { LLMProvider } from "./llmProvider.ts";
 import type { VectorStore } from "./vectorStore.ts";
 import type { ConversationRepository } from "./conversationRepository.ts";
+import type { RetrievalInput, RetrievalResult } from "../../domain/retrieval.ts";
+
+export interface RetrievalDependencies {
+  access: CourseAccessClient;
+  embeddings: EmbeddingProvider;
+  vectors: Pick<VectorStore, "search">;
+}
+export interface RetrievalService {
+  retrieve(input: RetrievalInput): Promise<RetrievalResult>;
+}
 
 export interface IndexResult { status: "indexed" | "unchanged" | "skipped"; chunks: number }
 export interface IngestionDependencies {
@@ -16,7 +26,6 @@ export interface IngestionDependencies {
   parsers: ParserRegistry;
   chunker: DocumentChunker;
 }
-/** API nghiệp vụ mà HTTP layer gọi, không chứa HTTP request hoặc SQL. */
 export interface IngestionService {
   ingestDocument(materialId: string): Promise<IndexResult>;
 }
