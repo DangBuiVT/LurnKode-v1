@@ -125,6 +125,10 @@ export interface BackendEnrollment {
   createdAt: string;
   course?: BackendCourse;
   lastAccessedLesson?: BackendLesson | null;
+  progress?: number;
+  totalLessons?: number;
+  completedLessons?: number;
+  status?: "in_progress" | "completed";
 }
 
 export interface BackendDiscussion {

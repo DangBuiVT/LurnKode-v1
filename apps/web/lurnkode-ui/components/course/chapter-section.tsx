@@ -29,10 +29,13 @@ export function ChapterSection({
 }: ChapterSectionProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
-  const cleanChapterTitle = chapter.title
-    .replace(/^chương\s*\d+[:.\s-]*/i, "")
-    .replace(/^chapter\s*\d+[:.\s-]*/i, "")
-    .trim();
+  const hasChapterPrefix =
+    /^chương\s*\d+[:.\s-]*/iu.test(chapter.title) ||
+    /^chapter\s*\d+[:.\s-]*/iu.test(chapter.title);
+
+  const displayChapterTitle = hasChapterPrefix
+    ? chapter.title
+    : `Chương ${chapter.chapterNumber}: ${chapter.title}`;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xs">
@@ -49,7 +52,7 @@ export function ChapterSection({
             <ChevronRight className="size-4.5 text-muted-foreground transition-transform" />
           )}
           <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
-            Chapter {chapter.chapterNumber}: {cleanChapterTitle}
+            {displayChapterTitle}
           </h2>
         </div>
 
@@ -91,7 +94,7 @@ export function ChapterSection({
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-foreground">
-                      {lesson.orderIndex} {lesson.title.replace(/^bài\s*\d+[:.\s-]*/i, "").replace(/^lesson\s*\d+[:.\s-]*/i, "").trim()}
+                      {lesson.orderIndex} {lesson.title.replace(/^bài\s*\d+[:.\s-]*/iu, "").replace(/^lesson\s*\d+[:.\s-]*/iu, "").trim()}
                     </span>
                   </div>
 
@@ -153,7 +156,7 @@ export function ChapterSection({
                           : ""
                       }`}
                     >
-                      {isCurrentActive ? "Resume" : "Learn"}
+                      {isCompleted ? "Review" : "Learn"}
                     </Button>
                   )}
                 </div>

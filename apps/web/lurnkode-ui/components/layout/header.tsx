@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -11,12 +12,61 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "./user-menu";
-import { getCourseByIdOrSlug } from "@/data/courses";
 import { useAuth } from "@/lib/auth-context";
+import { coursesApi } from "@/lib/api";
 
 export function Header() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const [courseInfo, setCourseInfo] = useState<{ courseTitle: string; lessonTitle?: string } | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (pathname && (pathname.startsWith("/learn/") || pathname.startsWith("/course/"))) {
+      const parts = pathname.startsWith("/learn/")
+        ? pathname.replace("/learn/", "").split("/").filter(Boolean)
+        : pathname.replace("/course/", "").split("/").filter(Boolean);
+      const courseId = parts[0];
+      const lessonId = parts[1];
+
+      if (courseId && courseId !== "catalog") {
+        void coursesApi
+          .getById(courseId)
+          .then((detail) => {
+            if (!isMounted || !detail) return;
+            let lessonTitle = "Lesson";
+            if (lessonId && detail.chapters) {
+              for (const ch of detail.chapters) {
+                const found = ch.lessons?.find(
+                  (l) => l.id === lessonId || String(l.orderIndex) === lessonId
+                );
+                if (found) {
+                  const clean = found.title
+                    .replace(/^bài\s*\d+[:.\s-]*/i, "")
+                    .replace(/^lesson\s*\d+[:.\s-]*/i, "")
+                    .trim();
+                  lessonTitle = `${ch.orderIndex}.${found.orderIndex} ${clean}`;
+                  break;
+                }
+              }
+            }
+            setCourseInfo({ courseTitle: detail.title, lessonTitle });
+          })
+          .catch(() => {});
+      } else {
+        queueMicrotask(() => {
+          if (isMounted) setCourseInfo(null);
+        });
+      }
+    } else {
+      queueMicrotask(() => {
+        if (isMounted) setCourseInfo(null);
+      });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [pathname]);
 
   const isInstructorOrAdmin =
     user && (user.role === "Instructor" || user.role === "Admin");
@@ -28,30 +78,9 @@ export function Header() {
     if (pathname && pathname.startsWith("/learn/")) {
       const parts = pathname.replace("/learn/", "").split("/").filter(Boolean);
       const courseId = parts[0] || "dsa";
-      const lessonId = parts[1];
 
-      const course = getCourseByIdOrSlug(courseId);
-      const courseTitle = course ? course.title : "Course Detail";
-
-      let lessonTitle = "Lesson";
-      if (course && lessonId) {
-        for (const ch of course.chapters) {
-          const found = ch.lessons.find(
-            (l) =>
-              l.id === lessonId ||
-              l.orderIndex === lessonId ||
-              l.id.endsWith(lessonId)
-          );
-          if (found) {
-            const clean = found.title
-              .replace(/^bài\s*\d+[:.\s-]*/i, "")
-              .replace(/^lesson\s*\d+[:.\s-]*/i, "")
-              .trim();
-            lessonTitle = `${found.orderIndex} ${clean}`;
-            break;
-          }
-        }
-      }
+      const courseTitle = courseInfo?.courseTitle || "Course Detail";
+      const lessonTitle = courseInfo?.lessonTitle || "Lesson";
 
       return (
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm">
@@ -94,9 +123,7 @@ export function Header() {
 
     // If we're inside a course detail page e.g. /course/dsa
     if (pathname && pathname.startsWith("/course/") && pathname !== "/course/catalog") {
-      const slugOrId = pathname.replace("/course/", "");
-      const course = getCourseByIdOrSlug(slugOrId);
-      const courseTitle = course ? course.title : "Course Detail";
+      const courseTitle = courseInfo?.courseTitle || "Course Detail";
 
       return (
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm">

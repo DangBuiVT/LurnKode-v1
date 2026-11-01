@@ -162,7 +162,7 @@ export function LessonContentCard({
       <div className="w-full bg-muted h-1 rounded-full overflow-hidden">
         <div
           className={`h-full transition-all duration-300 ${
-            isCompleted ? "w-full bg-emerald-600" : "w-1/3 bg-primary/60"
+            isCompleted ? "w-full bg-emerald-600" : "w-0 bg-primary/60"
           }`}
         />
       </div>

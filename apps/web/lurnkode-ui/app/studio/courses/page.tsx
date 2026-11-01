@@ -15,7 +15,6 @@ import {
   Archive,
   Filter,
 } from "lucide-react";
-import { STUDIO_COURSES, getStudioCourses } from "@/data/studio-courses";
 import { StudioCourseCard } from "@/components/studio/studio-course-card";
 import { CourseBuilderDialog } from "@/components/studio/course-builder-dialog";
 import { Pagination } from "@/components/ui/pagination";
@@ -43,7 +42,7 @@ export default function StudioCoursesPage() {
     }
   }, [user, isAuthLoading, router]);
 
-  const [courses, setCourses] = useState<StudioCourse[]>(STUDIO_COURSES);
+  const [courses, setCourses] = useState<StudioCourse[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -227,9 +226,8 @@ export default function StudioCoursesPage() {
           setCourses(liveStudioCourses);
         }
       })
-      .catch(() => {
-        const updated = getStudioCourses();
-        setCourses(updated);
+      .catch((err) => {
+        console.error("Failed to reload courses after save", err);
       });
 
     setNotification(

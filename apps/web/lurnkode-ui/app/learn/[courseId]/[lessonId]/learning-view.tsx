@@ -5,8 +5,6 @@ import { LessonContentCard } from "@/components/learn/lesson-content-card";
 // import { LessonSubmissionCard } from "@/components/learn/lesson-submission-card";
 import { LessonQuizCard } from "@/components/learn/lesson-quiz-card";
 import { LessonSwitcher } from "@/components/learn/lesson-switcher";
-import { mockDb } from "@/lib/db/mock-db";
-import { CURRENT_USER } from "@/lib/db/mock-data";
 import { enrollmentsApi } from "@/lib/api";
 import { Course, Lesson, User, Material } from "@/lib/db/schema";
 // import { Award, FileEdit } from "lucide-react";
@@ -32,10 +30,39 @@ export function LearningView({
   // const [assessmentTab, setAssessmentTab] = useState<"quiz" | "manual">("quiz");
   const [fetchedMaterials, setFetchedMaterials] = useState<Material[]>([]);
 
-  // Auto-record last accessed lesson for Smart Auto-Resume & fetch materials
+  // Synchronize completion status with live backend enrollment
   useEffect(() => {
-    mockDb.touchLessonAccess(CURRENT_USER.id, course.id, lesson.id);
+    let isMounted = true;
+    enrollmentsApi
+      .getMyEnrollments()
+      .then((myEnrollments) => {
+        if (!isMounted) return;
+        const myEnrollment = myEnrollments.find(
+          (e) => e.courseId === course.id || e.courseId === course.id.replace("c-", "")
+        );
+        if (myEnrollment) {
+          if (!myEnrollment.lastAccessedLessonId) {
+            setIsCompleted(false);
+          } else {
+            const currentIdx = allLessons.findIndex((l) => l.id === lesson.id);
+            const lastIdx = allLessons.findIndex((l) => l.id === myEnrollment.lastAccessedLessonId);
+            if (currentIdx !== -1 && lastIdx !== -1) {
+              setIsCompleted(currentIdx <= lastIdx);
+            }
+          }
+        } else {
+          setIsCompleted(false);
+        }
+      })
+      .catch(() => {});
 
+    return () => {
+      isMounted = false;
+    };
+  }, [course.id, lesson.id, allLessons]);
+
+  // Auto-fetch materials if not preloaded
+  useEffect(() => {
     if (materials.length === 0) {
       let isMounted = true;
       enrollmentsApi
@@ -61,7 +88,7 @@ export function LearningView({
         isMounted = false;
       };
     }
-  }, [course.id, lesson.id, materials.length]);
+  }, [lesson.id, materials.length]);
 
   const activeMaterials = materials.length > 0 ? materials : fetchedMaterials;
 
@@ -69,9 +96,8 @@ export function LearningView({
     try {
       await enrollmentsApi.completeLesson(lesson.id);
       setIsCompleted(true);
-    } catch {
-      const newState = mockDb.toggleLessonCompleted(CURRENT_USER.id, course.id, lesson.id);
-      setIsCompleted(newState);
+    } catch (err) {
+      console.error("Failed to mark lesson complete via API", err);
     }
   };
 

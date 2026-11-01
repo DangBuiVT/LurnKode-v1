@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   X,
   Plus,
@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Course, MaterialType } from "@/lib/db/schema";
-import { mockDb } from "@/lib/db/mock-db";
 import { coursesApi } from "@/lib/api";
 
 type BuilderStep = 1 | 2 | 3 | 4;
@@ -68,84 +67,86 @@ function CourseBuilderModalContent({
   onClose: () => void;
   onSaved: (course: Course) => void;
 }) {
-  const existingCourse = courseId ? mockDb.getCourseById(courseId) : undefined;
-  const existingHierarchy = existingCourse
-    ? mockDb.getCourseHierarchy(existingCourse.id)
-    : undefined;
-
   const [step, setStep] = useState<BuilderStep>(1);
 
   // Step 1: Basic Info
-  const [title, setTitle] = useState(existingCourse?.title || "");
-  const [category, setCategory] = useState(
-    existingCourse?.category || "Computer Science",
-  );
-  const [description, setDescription] = useState(
-    existingCourse?.description || "",
-  );
-  const [status, setStatus] = useState<"draft" | "published" | "archived">(
-    existingCourse?.status || "draft",
-  );
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("Computer Science");
+  const [description, setDescription] = useState("");
+  const [status, setStatus] = useState<"draft" | "published" | "archived">("draft");
 
   // Step 2 & 3: Curriculum & Materials
-  const [chapters, setChapters] = useState<ChapterFormItem[]>(() => {
-    if (existingHierarchy && existingHierarchy.chapters.length > 0) {
-      return existingHierarchy.chapters.map((ch) => ({
-        id: ch.id,
-        title: ch.title,
-        order_index: ch.order_index,
-        lessons: ch.lessons.map((les) => ({
-          id: les.id,
-          title: les.title,
-          order_index: les.order_index,
-          materials: les.materials.map((m) => ({
-            id: m.id,
-            title: m.title,
-            type: m.type,
-            content: m.content || "",
-            is_rag_source: m.is_rag_source,
-          })),
-        })),
-      }));
-    }
+  const [chapters, setChapters] = useState<ChapterFormItem[]>([
+    {
+      id: "ch-sample-1",
+      title: "Chapter 1: Overview & Core Fundamentals",
+      order_index: 1,
+      lessons: [
+        {
+          id: "les-sample-1-1",
+          title: "1.1 Course Introduction & Development Environment",
+          order_index: 1,
+          materials: [
+            {
+              title: "Environment Setup Guide",
+              type: "markdown",
+              content:
+                "## Development Environment Setup\n\n- Install IDE and required compilers/runtimes\n- Configure workspace template and project structure",
+              is_rag_source: true,
+            },
+          ],
+        },
+        {
+          id: "les-sample-1-2",
+          title: "1.2 Core Concepts & Problem Formulations",
+          order_index: 2,
+          materials: [
+            {
+              title: "Chapter 1 Lecture Slides",
+              type: "slide",
+              content: "https://slides.lurnkode.edu/dsa-chap1.pdf",
+              is_rag_source: true,
+            },
+          ],
+        },
+      ],
+    },
+  ]);
 
-    return [
-      {
-        id: "ch-sample-1",
-        title: "Chapter 1: Overview & Core Fundamentals",
-        order_index: 1,
-        lessons: [
-          {
-            id: "les-sample-1-1",
-            title: "1.1 Course Introduction & Development Environment",
-            order_index: 1,
-            materials: [
-              {
-                title: "Environment Setup Guide",
-                type: "markdown",
-                content:
-                  "## Development Environment Setup\n\n- Install IDE and required compilers/runtimes\n- Configure workspace template and project structure",
-                is_rag_source: true,
-              },
-            ],
-          },
-          {
-            id: "les-sample-1-2",
-            title: "1.2 Core Concepts & Problem Formulations",
-            order_index: 2,
-            materials: [
-              {
-                title: "Chapter 1 Lecture Slides",
-                type: "slide",
-                content: "https://slides.lurnkode.edu/dsa-chap1.pdf",
-                is_rag_source: true,
-              },
-            ],
-          },
-        ],
-      },
-    ];
-  });
+  // Load existing course details from Backend API if editing
+  useEffect(() => {
+    if (!courseId) return;
+    coursesApi
+      .getById(courseId)
+      .then((detail) => {
+        if (!detail) return;
+        setTitle(detail.title);
+        setDescription(detail.description || "");
+        if (detail.status === "published") setStatus("published");
+        if (detail.chapters && detail.chapters.length > 0) {
+          setChapters(
+            detail.chapters.map((ch) => ({
+              id: ch.id,
+              title: ch.title,
+              order_index: ch.orderIndex,
+              lessons: (ch.lessons || []).map((l) => ({
+                id: l.id,
+                title: l.title,
+                order_index: l.orderIndex,
+                materials: (l.materials || []).map((m) => ({
+                  id: m.id,
+                  title: m.title,
+                  type: m.type as MaterialType,
+                  content: m.textContent || "",
+                  is_rag_source: m.isRagSource,
+                })),
+              })),
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+  }, [courseId]);
 
   const [selectedLessonForMaterial, setSelectedLessonForMaterial] = useState<{
     chapterIdx: number;
@@ -388,6 +389,7 @@ function CourseBuilderModalContent({
     setIsSubmitting(true);
 
     // Đồng bộ trực tiếp lên Backend M2 qua API
+    let savedCourseId = courseId || undefined;
     try {
       if (!courseId) {
         const newCourse = await coursesApi.create({
@@ -395,6 +397,7 @@ function CourseBuilderModalContent({
           description: description.trim(),
         });
         if (newCourse?.id) {
+          savedCourseId = newCourse.id;
           for (let chIdx = 0; chIdx < chapters.length; chIdx++) {
             const ch = chapters[chIdx];
             const createdCh = await coursesApi.createChapter(newCourse.id, {
@@ -425,36 +428,26 @@ function CourseBuilderModalContent({
             await coursesApi.update(newCourse.id, { status: "published" });
           }
         }
+      } else {
+        await coursesApi.update(courseId, {
+          title: title.trim(),
+          description: description.trim(),
+          status: finalStatus === "published" ? "published" : "draft",
+        });
       }
-    } catch {
-      // Backend offline hoặc lỗi quyền -> lưu vào local mockDb
+    } catch (err) {
+      console.error("Failed to save course to Backend API", err);
     }
 
-    const savedCourse = mockDb.saveCourseWithCurriculum({
-      courseId: courseId || undefined,
-      instructor_id: "u-inst-01",
+    const savedCourse: Course = {
+      id: savedCourseId || `c-${Date.now()}`,
+      instructor_id: "instructor",
       title: title.trim(),
       description: description.trim(),
       status: finalStatus,
       category: category.trim(),
-      chapters: chapters.map((ch, chIdx) => ({
-        id: ch.id,
-        title: ch.title,
-        order_index: chIdx + 1,
-        lessons: ch.lessons.map((l, lesIdx) => ({
-          id: l.id,
-          title: l.title,
-          order_index: lesIdx + 1,
-          materials: l.materials.map((m) => ({
-            id: m.id,
-            title: m.title,
-            type: m.type,
-            content: m.content,
-            is_rag_source: m.is_rag_source,
-          })),
-        })),
-      })),
-    });
+      created_at: new Date().toISOString(),
+    };
 
     setIsSubmitting(false);
     onSaved(savedCourse);

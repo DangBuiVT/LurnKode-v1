@@ -29,9 +29,17 @@ export function adaptBackendCourse(
   bCourse: BackendCourse,
   enrollment?: BackendEnrollment | null
 ): Course {
-  const status: CourseStatus = enrollment
-    ? "in_progress"
-    : "not_enrolled";
+  const isEnrolled = !!enrollment;
+  const progress = enrollment ? enrollment.progress ?? 0 : 0;
+  const isCompleted =
+    isEnrolled &&
+    (progress >= 100 || enrollment.status === "completed");
+
+  const status: CourseStatus = !isEnrolled
+    ? "not_enrolled"
+    : isCompleted
+    ? "completed"
+    : "in_progress";
 
   const instructor =
     bCourse.instructorName ||
@@ -45,7 +53,7 @@ export function adaptBackendCourse(
     description: bCourse.description || "",
     instructor,
     status,
-    progress: enrollment ? 0 : 0,
+    progress,
     category: inferCategory(bCourse.title, bCourse.description),
     createdAt: bCourse.createdAt,
   };
