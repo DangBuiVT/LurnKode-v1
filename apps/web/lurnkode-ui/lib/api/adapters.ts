@@ -5,23 +5,6 @@ import {
 } from "./types";
 import { Course, CourseDetail, Chapter, Lesson, CourseStatus } from "@/types/course";
 
-function inferCategory(title: string, desc?: string | null): string {
-  const text = `${title} ${desc || ""}`.toLowerCase();
-  if (text.includes("ai") || text.includes("rag") || text.includes("vector") || text.includes("machine learning")) {
-    return "Artificial Intelligence";
-  }
-  if (text.includes("web") || text.includes("next.js") || text.includes("react") || text.includes("frontend")) {
-    return "Web Development";
-  }
-  if (text.includes("data structure") || text.includes("algorithm") || text.includes("dữ liệu") || text.includes("giải thuật")) {
-    return "Computer Science";
-  }
-  if (text.includes("database") || text.includes("sql") || text.includes("cơ sở dữ liệu")) {
-    return "Data & Systems";
-  }
-  return "Software Engineering";
-}
-
 /**
  * Transforms Backend M2 course item into M5 Course view model
  */
@@ -54,7 +37,7 @@ export function adaptBackendCourse(
     instructor,
     status,
     progress,
-    category: inferCategory(bCourse.title, bCourse.description),
+    category: "Uncategorized",
     createdAt: bCourse.createdAt,
   };
 }
@@ -155,7 +138,7 @@ export function adaptBackendCourseDetail(
     instructor,
     status,
     overallProgress,
-    category: inferCategory(detail.title, detail.description),
+    category: "Uncategorized",
     createdAt: detail.createdAt,
     chapters,
   };

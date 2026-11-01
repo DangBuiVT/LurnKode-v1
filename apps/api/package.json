@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "bun --env-file=.env x drizzle-kit generate",
     "db:migrate": "bun --env-file=.env x drizzle-kit migrate",
+    "db:seed:demo": "bun run scripts/seed-e2e-demo.ts",
     "db:push": "bun --env-file=.env x drizzle-kit push",
     "db:studio": "bun --env-file=.env x drizzle-kit studio"
   },

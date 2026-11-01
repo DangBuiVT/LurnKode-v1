@@ -61,7 +61,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<ApiUser | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Initialize auth state from token & /api/v1/auth/me
   useEffect(() => {
@@ -69,6 +69,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const token = getStoredToken();
 
     if (!token) {
+      queueMicrotask(() => {
+        if (mounted) setIsLoading(false);
+      });
       return;
     }
 
@@ -91,6 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           clearStoredToken();
           setUser(null);
         }
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false);
       });
 
     return () => {

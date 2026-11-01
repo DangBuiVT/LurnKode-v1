@@ -86,6 +86,24 @@ describe('M1 + M2 Full Integration — Curriculum, Sequential Learning, Interact
     learnerHeaders = { 'content-type': 'application/json', authorization: `Bearer ${learnerToken}` };
   });
 
+  it('Instructor course list includes owned drafts and excludes other owners', async () => {
+    const send = (method: string, path: string, headers: Record<string, string>, body?: unknown) =>
+      app.handle(new Request(`http://localhost${path}`, {
+        method, headers, body: body === undefined ? undefined : JSON.stringify(body),
+      }));
+
+    const ownCourse = ((await (await send('POST', '/api/v1/courses', inst1Headers, { title: 'INTERIM-TEST owned draft' })).json()) as any).data;
+    const otherCourse = ((await (await send('POST', '/api/v1/courses', inst2Headers, { title: 'INTERIM-TEST other draft' })).json()) as any).data;
+    const list = await send('GET', '/api/v1/my/courses', inst1Headers);
+    expect(list.status).toBe(200);
+    const listBody = (await list.json()) as any;
+    expect(listBody.data.some((course: { id: string; status: string }) => course.id === ownCourse.id && course.status === 'draft')).toBe(true);
+    expect(listBody.data.some((course: { id: string }) => course.id === otherCourse.id)).toBe(false);
+    expect((await send('GET', '/api/v1/my/courses', learnerHeaders)).status).toBe(403);
+    expect((await send('GET', `/api/v1/courses/${ownCourse.id}`, learnerHeaders)).status).toBe(404);
+    expect((await send('GET', `/api/v1/courses/${ownCourse.id}`, inst1Headers)).status).toBe(200);
+  });
+
   it('Leave course: learner can leave, then re-enroll', async () => {
     const send = (method: string, path: string, headers: Record<string, string>, body?: unknown) =>
       app.handle(new Request(`http://localhost${path}`, {
@@ -261,6 +279,16 @@ describe('M1 + M2 Full Integration — Curriculum, Sequential Learning, Interact
     );
     expect(validMatRes.status).toBe(201);
     material1Id = ((await validMatRes.json()) as any).data.id;
+
+    const studentDetail = await app.handle(new Request(`http://localhost/api/v1/courses/${courseId}`, { headers: learnerHeaders }));
+    const studentDetailBody = (await studentDetail.json()) as any;
+    const studentLesson = studentDetailBody.data.chapters.flatMap((chapter: any) => chapter.lessons).find((lesson: any) => lesson.id === lesson1Id);
+    expect(studentLesson.materials).toBeUndefined();
+
+    const ownerDetail = await app.handle(new Request(`http://localhost/api/v1/courses/${courseId}`, { headers: inst1Headers }));
+    const ownerDetailBody = (await ownerDetail.json()) as any;
+    const ownerLesson = ownerDetailBody.data.chapters.flatMap((chapter: any) => chapter.lessons).find((lesson: any) => lesson.id === lesson1Id);
+    expect(ownerLesson.materials.some((material: any) => material.id === material1Id)).toBe(true);
 
     const patchMatRes = await app.handle(
       new Request(`http://localhost/api/v1/materials/${material1Id}`, {

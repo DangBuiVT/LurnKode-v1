@@ -47,17 +47,6 @@ interface CourseBuilderDialogProps {
   onSaved: (course: Course) => void;
 }
 
-const CATEGORY_PRESETS = [
-  "Computer Science",
-  "Programming",
-  "Web Development",
-  "Artificial Intelligence",
-  "Data & Systems",
-  "Software Engineering",
-  "Cybersecurity",
-  "Mobile Development",
-];
-
 function CourseBuilderModalContent({
   courseId,
   onClose,
@@ -71,47 +60,12 @@ function CourseBuilderModalContent({
 
   // Step 1: Basic Info
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("Computer Science");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<"draft" | "published" | "archived">("draft");
 
   // Step 2 & 3: Curriculum & Materials
-  const [chapters, setChapters] = useState<ChapterFormItem[]>([
-    {
-      id: "ch-sample-1",
-      title: "Chapter 1: Overview & Core Fundamentals",
-      order_index: 1,
-      lessons: [
-        {
-          id: "les-sample-1-1",
-          title: "1.1 Course Introduction & Development Environment",
-          order_index: 1,
-          materials: [
-            {
-              title: "Environment Setup Guide",
-              type: "markdown",
-              content:
-                "## Development Environment Setup\n\n- Install IDE and required compilers/runtimes\n- Configure workspace template and project structure",
-              is_rag_source: true,
-            },
-          ],
-        },
-        {
-          id: "les-sample-1-2",
-          title: "1.2 Core Concepts & Problem Formulations",
-          order_index: 2,
-          materials: [
-            {
-              title: "Chapter 1 Lecture Slides",
-              type: "slide",
-              content: "https://slides.lurnkode.edu/dsa-chap1.pdf",
-              is_rag_source: true,
-            },
-          ],
-        },
-      ],
-    },
-  ]);
+  const [chapters, setChapters] = useState<ChapterFormItem[]>([]);
+  const [baselineChapters, setBaselineChapters] = useState<ChapterFormItem[]>([]);
 
   // Load existing course details from Backend API if editing
   useEffect(() => {
@@ -124,8 +78,7 @@ function CourseBuilderModalContent({
         setDescription(detail.description || "");
         if (detail.status === "published") setStatus("published");
         if (detail.chapters && detail.chapters.length > 0) {
-          setChapters(
-            detail.chapters.map((ch) => ({
+          const loadedChapters = detail.chapters.map((ch) => ({
               id: ch.id,
               title: ch.title,
               order_index: ch.orderIndex,
@@ -137,12 +90,13 @@ function CourseBuilderModalContent({
                   id: m.id,
                   title: m.title,
                   type: m.type as MaterialType,
-                  content: m.textContent || "",
+                  content: m.textContent || m.contentUrl || "",
                   is_rag_source: m.isRagSource,
                 })),
               })),
-            }))
-          );
+            }));
+          setChapters(loadedChapters);
+          setBaselineChapters(loadedChapters);
         }
       })
       .catch(() => {});
@@ -162,23 +116,9 @@ function CourseBuilderModalContent({
       ...chapters,
       {
         id: `ch-new-${newIdx}`,
-        title: `Chapter ${newIdx}: Advanced Topics`,
+        title: `New Chapter ${newIdx}`,
         order_index: newIdx,
-        lessons: [
-          {
-            id: `les-new-${newIdx}-1`,
-            title: `${newIdx}.1 Introductory Lesson`,
-            order_index: 1,
-            materials: [
-              {
-                title: "Core Concepts & Lecture Notes",
-                type: "markdown",
-                content: "Learning notes and lesson content...",
-                is_rag_source: true,
-              },
-            ],
-          },
-        ],
+        lessons: [],
       },
     ]);
   };
@@ -211,14 +151,7 @@ function CourseBuilderModalContent({
                 id: `les-new-${chIdx + 1}-${newLesIdx}`,
                 title: `${ch.order_index}.${newLesIdx} New Lesson`,
                 order_index: newLesIdx,
-                materials: [
-                  {
-                    title: "Learning Materials & Resources",
-                    type: "markdown",
-                    content: "Lesson description and guide...",
-                    is_rag_source: true,
-                  },
-                ],
+                materials: [],
               },
             ],
           };
@@ -232,10 +165,6 @@ function CourseBuilderModalContent({
     setChapters(
       chapters.map((ch, i) => {
         if (i === chIdx) {
-          if (ch.lessons.length <= 1) {
-            alert("Each chapter must have at least 1 lesson.");
-            return ch;
-          }
           return {
             ...ch,
             lessons: ch.lessons.filter((_, idx) => idx !== lesIdx),
@@ -280,7 +209,7 @@ function CourseBuilderModalContent({
                   materials: [
                     ...l.materials,
                     {
-                      title: "New Learning Material (Video / Document)",
+                    title: "",
                       type: "markdown",
                       content: "",
                       is_rag_source: true,
@@ -309,10 +238,6 @@ function CourseBuilderModalContent({
             ...ch,
             lessons: ch.lessons.map((l, j) => {
               if (j === lesIdx) {
-                if (l.materials.length <= 1) {
-                  alert("Each lesson requires at least 1 learning material.");
-                  return l;
-                }
                 return {
                   ...l,
                   materials: l.materials.filter((_, mIdx) => mIdx !== matIdx),
@@ -343,9 +268,12 @@ function CourseBuilderModalContent({
               if (j === lesIdx) {
                 return {
                   ...l,
-                  materials: l.materials.map((m, k) =>
-                    k === matIdx ? { ...m, [field]: val } : m,
-                  ),
+                  materials: l.materials.map((m, k) => {
+                    if (k !== matIdx) return m;
+                    const updated = { ...m, [field]: val };
+                    if (field === "type" && val !== "markdown") updated.is_rag_source = false;
+                    return updated;
+                  }),
                 };
               }
               return l;
@@ -388,70 +316,95 @@ function CourseBuilderModalContent({
 
     setIsSubmitting(true);
 
-    // Đồng bộ trực tiếp lên Backend M2 qua API
-    let savedCourseId = courseId || undefined;
     try {
-      if (!courseId) {
+      let savedCourse;
+      let savedCourseId = courseId;
+      const isNewCourse = !courseId;
+      if (isNewCourse) {
         const newCourse = await coursesApi.create({
           title: title.trim(),
           description: description.trim(),
         });
         if (newCourse?.id) {
           savedCourseId = newCourse.id;
-          for (let chIdx = 0; chIdx < chapters.length; chIdx++) {
-            const ch = chapters[chIdx];
-            const createdCh = await coursesApi.createChapter(newCourse.id, {
-              title: ch.title,
-              orderIndex: chIdx + 1,
-            });
-            if (createdCh?.id) {
-              for (let lesIdx = 0; lesIdx < ch.lessons.length; lesIdx++) {
-                const les = ch.lessons[lesIdx];
-                const createdLes = await coursesApi.createLesson(createdCh.id, {
-                  title: les.title,
-                  orderIndex: lesIdx + 1,
-                });
-                if (createdLes?.id) {
-                  for (const mat of les.materials) {
-                    await coursesApi.createMaterial(createdLes.id, {
-                      type: mat.type,
-                      title: mat.title,
-                      textContent: mat.content,
-                      isRagSource: mat.is_rag_source,
-                    }).catch(() => null);
-                  }
-                }
-              }
-            }
-          }
-          if (finalStatus === "published") {
-            await coursesApi.update(newCourse.id, { status: "published" });
-          }
+          savedCourse = newCourse;
+        } else {
+          throw new Error("The API did not return the created course.");
         }
-      } else {
-        await coursesApi.update(courseId, {
+      }
+
+      if (!isNewCourse) {
+        savedCourse = await coursesApi.update(savedCourseId!, {
           title: title.trim(),
           description: description.trim(),
           status: finalStatus === "published" ? "published" : "draft",
         });
       }
+
+      const currentChapterIds = new Set(chapters.map((chapter) => chapter.id).filter((id): id is string => Boolean(id && !id.startsWith("ch-new-"))));
+      for (const [chIdx, chapter] of chapters.entries()) {
+        const savedChapter = chapter.id && !chapter.id.startsWith("ch-new-") && !isNewCourse
+          ? await coursesApi.updateChapter(chapter.id, { title: chapter.title, orderIndex: chIdx + 1 })
+          : await coursesApi.createChapter(savedCourseId!, { title: chapter.title, orderIndex: chIdx + 1 });
+        const currentLessonIds = new Set(chapter.lessons.map((lesson) => lesson.id).filter((id): id is string => Boolean(id && !id.startsWith("les-new-"))));
+        for (const [lesIdx, lesson] of chapter.lessons.entries()) {
+          const savedLesson = lesson.id && !lesson.id.startsWith("les-new-") && !isNewCourse
+            ? await coursesApi.updateLesson(lesson.id, { title: lesson.title, orderIndex: lesIdx + 1 })
+            : await coursesApi.createLesson(savedChapter.id, { title: lesson.title, orderIndex: lesIdx + 1 });
+          const currentMaterialIds = new Set(lesson.materials.map((material) => material.id).filter((id): id is string => Boolean(id)));
+          for (const material of lesson.materials) {
+            const materialPayload = {
+              type: material.type,
+              title: material.title,
+              contentUrl: material.type === "markdown" ? undefined : material.content,
+              textContent: material.type === "markdown" ? material.content : undefined,
+              isRagSource: material.is_rag_source,
+            };
+            if (material.id && !isNewCourse) await coursesApi.updateMaterial(material.id, materialPayload);
+            else await coursesApi.createMaterial(savedLesson.id, materialPayload);
+          }
+          const baselineLesson = baselineChapters.flatMap((item) => item.lessons).find((item) => item.id === lesson.id);
+          if (baselineLesson) {
+            for (const material of baselineLesson.materials) {
+              if (material.id && !currentMaterialIds.has(material.id)) await coursesApi.deleteMaterial(material.id);
+            }
+          }
+        }
+        if (!isNewCourse) {
+          const baselineChapter = baselineChapters.find((item) => item.id === chapter.id);
+          for (const oldLesson of baselineChapter?.lessons || []) {
+            if (oldLesson.id && !currentLessonIds.has(oldLesson.id)) await coursesApi.deleteLesson(oldLesson.id);
+          }
+        }
+      }
+      if (!isNewCourse) {
+        for (const oldChapter of baselineChapters) {
+          if (oldChapter.id && !currentChapterIds.has(oldChapter.id)) await coursesApi.deleteChapter(oldChapter.id);
+        }
+      }
+      if (finalStatus === "published" && savedCourse?.status !== "published") {
+        savedCourse = await coursesApi.update(savedCourseId!, { status: "published" });
+      }
+      if (finalStatus === "draft" && savedCourse?.status === "published") {
+        savedCourse = await coursesApi.update(savedCourseId!, { status: "draft" });
+      }
+      const savedCourseView: Course = {
+        id: savedCourse!.id,
+        instructor_id: savedCourse!.instructorId,
+        title: savedCourse!.title,
+        description: savedCourse!.description,
+        status: savedCourse!.status,
+        category: "",
+        created_at: savedCourse!.createdAt,
+      };
+      onSaved(savedCourseView);
+      onClose();
     } catch (err) {
       console.error("Failed to save course to Backend API", err);
+      alert("Course could not be saved. Please check the API connection and try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const savedCourse: Course = {
-      id: savedCourseId || `c-${Date.now()}`,
-      instructor_id: "instructor",
-      title: title.trim(),
-      description: description.trim(),
-      status: finalStatus,
-      category: category.trim(),
-      created_at: new Date().toISOString(),
-    };
-
-    setIsSubmitting(false);
-    onSaved(savedCourse);
-    onClose();
   };
 
   // Counts for summary
@@ -570,32 +523,6 @@ function CourseBuilderModalContent({
                   placeholder="e.g. Advanced Object-Oriented System Design & Patterns"
                   className="w-full rounded-lg border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">
-                  Category <span className="text-destructive">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="flex-1 rounded-lg border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    {CATEGORY_PRESETS.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    placeholder="Or enter custom category..."
-                    className="flex-1 rounded-lg border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -1076,7 +1003,7 @@ function CourseBuilderModalContent({
               <div className="rounded-xl border bg-card p-5 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="rounded-md border bg-muted px-2 py-0.5 text-[10px] font-semibold text-foreground">
-                    {category}
+                    Uncategorized
                   </span>
                   <span
                     className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${

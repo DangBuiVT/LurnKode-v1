@@ -106,18 +106,52 @@ export const CourseService = {
     return { items, total, page, limit };
   },
 
-  async getCourseDetails(courseId: string) {
+  async listInstructorCourses(user: AuthUser, page = 1, limit = 100) {
+    const ownershipFilter = user.role === 'Admin' ? undefined : eq(courses.instructorId, user.id);
+    const countQuery = db.select({ total: count() }).from(courses);
+    const itemQuery = db
+      .select({
+        id: courses.id,
+        instructorId: courses.instructorId,
+        title: courses.title,
+        description: courses.description,
+        status: courses.status,
+        createdAt: courses.createdAt,
+        instructorName: users.fullName,
+        instructorEmail: users.email,
+      })
+      .from(courses)
+      .leftJoin(users, eq(courses.instructorId, users.id));
+    const [row] = ownershipFilter
+      ? await countQuery.where(ownershipFilter)
+      : await countQuery;
+    const total = Number(row?.total ?? 0);
+    const items = ownershipFilter
+      ? await itemQuery.where(ownershipFilter).orderBy(sql`${courses.createdAt} desc`).limit(limit).offset((page - 1) * limit)
+      : await itemQuery.orderBy(sql`${courses.createdAt} desc`).limit(limit).offset((page - 1) * limit);
+    return { items, total, page, limit };
+  },
+
+  async getCourseDetails(courseId: string, user?: AuthUser | null) {
     const details = await db.query.courses.findFirst({
       where: eq(courses.id, courseId),
-      with: { chapters: { orderBy: asc(chapters.orderIndex), with: { lessons: { orderBy: asc(lessons.orderIndex) } } } }
+      with: { chapters: { orderBy: asc(chapters.orderIndex), with: { lessons: { orderBy: asc(lessons.orderIndex), with: { materials: true } } } } }
     });
     if (!details) throw Errors.NotFound('Course');
+    const canManage = Boolean(user && (user.role === 'Admin' || details.instructorId === user.id));
+    if (details.status !== 'published' && !canManage) {
+      throw Errors.NotFound('Course');
+    }
     const [instUser] = await db
       .select({ fullName: users.fullName, email: users.email })
       .from(users)
       .where(eq(users.id, details.instructorId));
     return {
       ...details,
+      chapters: canManage ? details.chapters : details.chapters.map((chapter) => ({
+        ...chapter,
+        lessons: chapter.lessons.map(({ materials: _materials, ...lesson }) => lesson),
+      })),
       instructorName: instUser?.fullName || 'Instructor',
       instructorEmail: instUser?.email,
     };

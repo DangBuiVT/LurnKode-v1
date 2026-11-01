@@ -15,6 +15,11 @@ export const coursesApi = {
     return apiClient<BackendCourse[]>("/api/v1/courses", { query });
   },
 
+  /** Courses owned by the authenticated instructor, including drafts. */
+  async listMine(query?: { page?: number; limit?: number }): Promise<BackendCourse[]> {
+    return apiClient<BackendCourse[]>("/api/v1/my/courses", { query });
+  },
+
   /**
    * Chi tiết khóa học bao gồm các chapters và lessons
    */
@@ -134,6 +139,7 @@ export const coursesApi = {
   async updateMaterial(
     materialId: string,
     data: {
+      type?: "video" | "markdown" | "slide";
       title?: string;
       contentUrl?: string;
       textContent?: string;

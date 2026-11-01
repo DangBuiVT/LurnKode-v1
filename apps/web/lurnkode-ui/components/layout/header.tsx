@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Bell,
   Sparkles,
   ChevronRight,
   GraduationCap,
@@ -14,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { UserMenu } from "./user-menu";
 import { useAuth } from "@/lib/auth-context";
 import { coursesApi } from "@/lib/api";
+import { NotificationBell } from "./notification-bell";
 
 export function Header() {
   const pathname = usePathname();
@@ -171,14 +171,7 @@ export function Header() {
       {/* Right section: Actions & Profile */}
       <div className="flex items-center gap-3">
         {/* Notification Bell */}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Bell className="size-4" />
-          <span className="sr-only">Notifications</span>
-        </button>
+        <NotificationBell />
 
         {/* Creator Studio Shortcut for Instructors/Admins */}
         {isInstructorOrAdmin && (

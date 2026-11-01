@@ -43,6 +43,8 @@ export default function StudioCoursesPage() {
   }, [user, isAuthLoading, router]);
 
   const [courses, setCourses] = useState<StudioCourse[]>([]);
+  const [isCoursesLoading, setIsCoursesLoading] = useState(true);
+  const [coursesError, setCoursesError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -57,27 +59,34 @@ export default function StudioCoursesPage() {
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Load live courses from backend API
+  const refreshCourses = async () => {
+    setIsCoursesLoading(true);
+    setCoursesError(null);
+    try {
+      const backendCourses = await coursesApi.listMine();
+      setCourses(backendCourses.map((c) => ({
+        id: c.id,
+        title: c.title,
+        description: c.description || "",
+        status: (c.status === "published" ? "Published" : "Draft") as StudioCourseStatus,
+        enrolledCount: 0,
+        updatedAt: c.createdAt,
+        createdAt: c.createdAt,
+      })));
+    } catch {
+      setCourses([]);
+      setCoursesError("Unable to load your courses. Check your connection and try again.");
+    } finally {
+      setIsCoursesLoading(false);
+    }
+  };
+
   useEffect(() => {
-    coursesApi
-      .listPublished({ limit: 100 })
-      .then((backendCourses) => {
-        if (backendCourses && backendCourses.length > 0) {
-          const liveStudioCourses: StudioCourse[] = backendCourses.map((c) => ({
-            id: c.id,
-            title: c.title,
-            description: c.description || "",
-            status: (c.status === "published" ? "Published" : "Draft") as StudioCourseStatus,
-            enrolledCount: 0,
-            updatedAt: "Just now",
-            category: "Software Engineering",
-            createdAt: c.createdAt,
-          }));
-          setCourses(liveStudioCourses);
-        }
-      })
-      .catch(() => {});
-  }, []);
+    if (!isAuthLoading && user && user.role !== "Learner") {
+      const timer = setTimeout(() => void refreshCourses(), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthLoading, user]);
 
   // Extract unique categories
   const categories = useMemo(() => {
@@ -193,6 +202,10 @@ export default function StudioCoursesPage() {
     categoryFilter !== "all" ||
     sortBy !== "updated_desc";
 
+  if (isAuthLoading || !user || user.role === "Learner") {
+    return <div role="status" className="mx-auto max-w-7xl p-8 text-center text-sm text-muted-foreground">Checking instructor access…</div>;
+  }
+
   const handleEdit = (courseId: string) => {
     setEditingCourseId(courseId);
     setIsBuilderOpen(true);
@@ -209,26 +222,7 @@ export default function StudioCoursesPage() {
   };
 
   const handleSavedCourse = (savedCourse: Course) => {
-    coursesApi
-      .listPublished({ limit: 100 })
-      .then((backendCourses) => {
-        if (backendCourses && backendCourses.length > 0) {
-          const liveStudioCourses: StudioCourse[] = backendCourses.map((c) => ({
-            id: c.id,
-            title: c.title,
-            description: c.description || "",
-            status: (c.status === "published" ? "Published" : "Draft") as StudioCourseStatus,
-            enrolledCount: 0,
-            updatedAt: "Just now",
-            category: "Software Engineering",
-            createdAt: c.createdAt,
-          }));
-          setCourses(liveStudioCourses);
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to reload courses after save", err);
-      });
+    void refreshCourses();
 
     setNotification(
       `Course "${savedCourse.title}" has been successfully ${
@@ -511,7 +505,14 @@ export default function StudioCoursesPage() {
       </div>
 
       {/* Courses Grid */}
-      {paginatedCourses.length === 0 ? (
+      {isCoursesLoading ? (
+        <div role="status" className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">Loading your courses…</div>
+      ) : coursesError ? (
+        <div role="alert" className="rounded-xl border border-destructive/30 bg-card p-8 text-center">
+          <p className="text-sm text-muted-foreground">{coursesError}</p>
+          <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => void refreshCourses()}>Retry</Button>
+        </div>
+      ) : paginatedCourses.length === 0 ? (
         <div className="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/40 p-8 text-center">
           <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-3">
             <Search className="size-6" />

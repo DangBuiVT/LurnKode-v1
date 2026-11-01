@@ -42,12 +42,22 @@ export const courseRoutes = new Elysia({ prefix: '/api/v1' })
     { query: ListCoursesQuerySchema }
   )
 
+  .get(
+    '/my/courses',
+    async ({ user, query }) => {
+      const authUser = requireRoles(user, ['Instructor', 'Admin']);
+      const result = await CourseService.listInstructorCourses(authUser, query.page, query.limit);
+      return paginated(result.items, result.page, result.limit, result.total);
+    },
+    { query: ListCoursesQuerySchema }
+  )
+
   // 3. GET /api/v1/courses/:id
   .get(
     '/courses/:id',
-    async ({ params }) => {
+    async ({ params, user }) => {
       // TODO: Gọi CourseService.getCourseDetails(params.id) và trả về ok(...)
-      const detail = await CourseService.getCourseDetails(params.id);
+      const detail = await CourseService.getCourseDetails(params.id, user);
       return ok(detail);
     },
     { params: IdParamSchema }

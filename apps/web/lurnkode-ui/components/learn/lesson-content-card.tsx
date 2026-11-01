@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Check, CheckCircle2, MessageSquare, BookOpen, Send, CornerDownRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { interactionsApi } from "@/lib/api/interactions";
+import { useAuth } from "@/lib/auth-context";
+import type { BackendDiscussion } from "@/lib/api/types";
 
 interface Comment {
   id: string;
@@ -14,6 +17,7 @@ interface Comment {
 }
 
 interface LessonContentCardProps {
+  lessonId: string;
   lessonIndex: string; // e.g. "1.2"
   lessonTitle: string;
   instructorName: string;
@@ -22,7 +26,20 @@ interface LessonContentCardProps {
   markdownContent?: string;
 }
 
+function mapDiscussion(entry: BackendDiscussion, currentUserId?: string): Comment {
+  const author = entry.userId === currentUserId ? "You" : "Participant";
+  return {
+    id: entry.id,
+    author,
+    avatar: author === "You" ? "ME" : "P",
+    time: new Date(entry.createdAt).toLocaleString(),
+    content: entry.textContent,
+    replies: (entry.replies || []).map((reply) => mapDiscussion(reply, currentUserId)),
+  };
+}
+
 export function LessonContentCard({
+  lessonId,
   lessonIndex,
   lessonTitle,
   instructorName,
@@ -30,39 +47,34 @@ export function LessonContentCard({
   onToggleComplete,
   markdownContent,
 }: LessonContentCardProps) {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"content" | "discussion">("content");
   const [commentText, setCommentText] = useState("");
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
 
-  const [comments, setComments] = useState<Comment[]>([
-    {
-      id: "c-1",
-      author: "Alex Morgan",
-      avatar: "AM",
-      time: "2 hours ago",
-      content:
-        "Is binary search guaranteed to be O(log N) if the input array contains duplicate elements?",
-      replies: [
-        {
-          id: "c-1-1",
-          author: instructorName || "John Doe (Instructor)",
-          avatar: "JD",
-          time: "1 hour ago",
-          content:
-            "Yes! The worst-case time complexity remains O(log N), but if you need to find the leftmost or rightmost duplicate, you'll need the bisect-left / bisect-right variation.",
-        },
-      ],
-    },
-    {
-      id: "c-2",
-      author: "Tran Van Minh",
-      avatar: "TM",
-      time: "Yesterday",
-      content: "Do we have sample test cases provided for edge cases like empty arrays or single elements?",
-      replies: [],
-    },
-  ]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [discussionLoading, setDiscussionLoading] = useState(false);
+  const [discussionError, setDiscussionError] = useState<string | null>(null);
+
+  const loadDiscussions = useCallback(async () => {
+    setDiscussionLoading(true);
+    try {
+      const discussions = await interactionsApi.listLessonDiscussions(lessonId);
+      setComments(discussions.map((entry) => mapDiscussion(entry, user?.id)));
+      setDiscussionError(null);
+    } catch {
+      setComments([]);
+      setDiscussionError("Discussion could not be loaded. You may need to enroll in this course.");
+    } finally {
+      setDiscussionLoading(false);
+    }
+  }, [lessonId, user?.id]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => void loadDiscussions(), 0);
+    return () => clearTimeout(timer);
+  }, [loadDiscussions]);
 
   const totalCommentCount = comments.reduce(
     (acc, curr) => acc + 1 + (curr.replies?.length || 0),
@@ -81,44 +93,23 @@ export function LessonContentCard({
     return `${lessonIndex} ${clean}`;
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!commentText.trim()) return;
-    const newComment: Comment = {
-      id: `c-${Date.now()}`,
-      author: "You (Learner)",
-      avatar: "ME",
-      time: "Just now",
-      content: commentText.trim(),
-      replies: [],
-    };
-    setComments([...comments, newComment]);
-    setCommentText("");
+    try {
+      await interactionsApi.createDiscussion(lessonId, { textContent: commentText.trim() });
+      setCommentText("");
+      await loadDiscussions();
+    } catch { setDiscussionError("Your discussion could not be posted."); }
   };
 
-  const handleAddReply = (parentId: string) => {
+  const handleAddReply = async (parentId: string) => {
     if (!replyText.trim()) return;
-    setComments(
-      comments.map((c) => {
-        if (c.id === parentId) {
-          return {
-            ...c,
-            replies: [
-              ...(c.replies || []),
-              {
-                id: `rep-${Date.now()}`,
-                author: "You (Learner)",
-                avatar: "ME",
-                time: "Just now",
-                content: replyText.trim(),
-              },
-            ],
-          };
-        }
-        return c;
-      })
-    );
-    setReplyingToId(null);
-    setReplyText("");
+    try {
+      await interactionsApi.createDiscussion(lessonId, { textContent: replyText.trim(), parentId });
+      setReplyingToId(null);
+      setReplyText("");
+      await loadDiscussions();
+    } catch { setDiscussionError("Your reply could not be posted."); }
   };
 
   return (
@@ -230,6 +221,9 @@ export function LessonContentCard({
 
           {/* Comment Threads */}
           <div className="space-y-3">
+            {discussionLoading && <p role="status" className="text-sm text-muted-foreground">Loading discussion…</p>}
+            {discussionError && <div role="alert" className="text-sm text-destructive">{discussionError} <button className="underline" onClick={() => void loadDiscussions()}>Retry</button></div>}
+            {!discussionLoading && !discussionError && comments.length === 0 && <p className="text-sm text-muted-foreground">No discussion posts yet.</p>}
             {comments.map((c) => (
               <div key={c.id} className="rounded-lg border bg-muted/30 p-3 space-y-2 text-xs sm:text-sm">
                 <div className="flex items-center justify-between">

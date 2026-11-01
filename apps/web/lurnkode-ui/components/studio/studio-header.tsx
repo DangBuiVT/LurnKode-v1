@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import {
-  Bell,
   Sparkles,
   ChevronRight,
   GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/layout/user-menu";
+import { NotificationBell } from "@/components/layout/notification-bell";
 
 export function StudioHeader() {
   return (
@@ -41,14 +41,7 @@ export function StudioHeader() {
       {/* Right section: Notifications, AI Tutor & User Profile */}
       <div className="flex items-center gap-3">
         {/* Notification Bell */}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Bell className="size-4" />
-          <span className="sr-only">Notifications</span>
-        </button>
+        <NotificationBell />
 
         {/* AI Tutor Button (Purple & Amber Accent) */}
         <Button

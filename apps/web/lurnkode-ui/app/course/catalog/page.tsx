@@ -30,6 +30,8 @@ export default function CourseCatalogPage() {
   const { user, isAuthenticated } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [instructorFilter, setInstructorFilter] = useState<string>("all");
@@ -52,10 +54,16 @@ export default function CourseCatalogPage() {
     fetchCourses()
       .then((data) => {
         if (isMounted) {
-          setCourses(data || []);
+          setCourses(data);
+          setLoadError(null);
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (isMounted) {
+          setCourses([]);
+          setLoadError("Unable to load courses. Check your connection and try again.");
+        }
+      })
       .finally(() => {
         if (isMounted) {
           setIsLoading(false);
@@ -65,7 +73,7 @@ export default function CourseCatalogPage() {
     return () => {
       isMounted = false;
     };
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, reloadKey]);
 
   // Extract unique instructors and categories
   const instructors = useMemo(() => {
@@ -597,6 +605,14 @@ export default function CourseCatalogPage() {
               <div className="h-9 bg-muted/50 rounded-xl w-full" />
             </div>
           ))}
+        </div>
+      ) : loadError ? (
+        <div role="alert" className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-destructive/30 bg-card/40 p-8 text-center">
+          <h2 className="text-base font-semibold text-foreground">Course catalog unavailable</h2>
+          <p className="mt-1 max-w-sm text-sm text-muted-foreground">{loadError}</p>
+          <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => setReloadKey((key) => key + 1)}>
+            Retry
+          </Button>
         </div>
       ) : paginatedCourses.length === 0 ? (
         <div className="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/40 p-8 text-center">

@@ -1,9 +1,8 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { enrollmentsApi, coursesApi } from "@/lib/api";
 import { fetchCourseById } from "@/data/courses";
 import { LearningView } from "./learning-view";
-import { Course, Lesson, User, Material } from "@/lib/db/schema";
+import { Course, Lesson, User } from "@/lib/db/schema";
 
 interface PageProps {
   params: Promise<{
@@ -58,57 +57,10 @@ async function LearnLessonContent({ params }: PageProps) {
       });
     });
 
-    let targetLesson = allLessons.find((l) => l.id === lessonId);
-    if (!targetLesson && allLessons.length > 0) {
-      targetLesson = allLessons[0];
-    }
+    const targetLesson = allLessons.find((l) => l.id === lessonId);
 
     if (!targetLesson) {
       notFound();
-    }
-
-    // Lấy tài liệu trực tiếp từ API access lesson hoặc backend course detail
-    let materials: Material[] = [];
-    try {
-      const raw = await enrollmentsApi.accessLesson(targetLesson.id);
-      if (raw && raw.length > 0) {
-        materials = raw.map((m) => ({
-          id: m.id,
-          lesson_id: m.lessonId,
-          title: m.title,
-          type: m.type as Material["type"],
-          content: m.textContent || "",
-          is_rag_source: m.isRagSource,
-          created_at: m.createdAt,
-        }));
-      }
-    } catch {
-      // Nếu API access gặp lỗi (ví dụ chưa hoàn thành bài trước), vẫn cố lấy từ course detail
-    }
-
-    // Nếu chưa có materials, thử lấy từ raw backend course detail
-    if (materials.length === 0) {
-      try {
-        const rawDetail = await coursesApi.getById(courseId);
-        for (const ch of rawDetail.chapters || []) {
-          for (const l of ch.lessons || []) {
-            if (l.id === targetLesson.id && l.materials && l.materials.length > 0) {
-              materials = l.materials.map((m) => ({
-                id: m.id,
-                lesson_id: m.lessonId,
-                title: m.title,
-                type: m.type as Material["type"],
-                content: m.textContent || "",
-                is_rag_source: m.isRagSource,
-                created_at: m.createdAt,
-              }));
-              break;
-            }
-          }
-        }
-      } catch {
-        // Fallback
-      }
     }
 
     const isCompleted = lessonStatusMap.get(targetLesson.id) === "completed";
@@ -118,7 +70,7 @@ async function LearnLessonContent({ params }: PageProps) {
         course={course}
         lesson={targetLesson}
         instructor={instructor}
-        materials={materials}
+        materials={[]}
         allLessons={allLessons}
         initialIsCompleted={isCompleted}
       />

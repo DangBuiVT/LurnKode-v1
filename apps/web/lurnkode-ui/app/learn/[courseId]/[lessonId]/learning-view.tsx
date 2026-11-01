@@ -27,6 +27,9 @@ export function LearningView({
   initialIsCompleted,
 }: LearningViewProps) {
   const [isCompleted, setIsCompleted] = useState(initialIsCompleted);
+  const [hasEnrollment, setHasEnrollment] = useState(false);
+  const [lastAccessedRank, setLastAccessedRank] = useState(0);
+  const [materialsError, setMaterialsError] = useState<string | null>(null);
   // const [assessmentTab, setAssessmentTab] = useState<"quiz" | "manual">("quiz");
   const [fetchedMaterials, setFetchedMaterials] = useState<Material[]>([]);
 
@@ -41,20 +44,21 @@ export function LearningView({
           (e) => e.courseId === course.id || e.courseId === course.id.replace("c-", "")
         );
         if (myEnrollment) {
-          if (!myEnrollment.lastAccessedLessonId) {
-            setIsCompleted(false);
-          } else {
-            const currentIdx = allLessons.findIndex((l) => l.id === lesson.id);
-            const lastIdx = allLessons.findIndex((l) => l.id === myEnrollment.lastAccessedLessonId);
-            if (currentIdx !== -1 && lastIdx !== -1) {
-              setIsCompleted(currentIdx <= lastIdx);
-            }
-          }
+          setHasEnrollment(true);
+          const currentIdx = allLessons.findIndex((l) => l.id === lesson.id);
+          const lastIdx = allLessons.findIndex((l) => l.id === myEnrollment.lastAccessedLessonId);
+          const rank = lastIdx + 1;
+          setLastAccessedRank(rank);
+          setIsCompleted(currentIdx !== -1 && currentIdx < rank);
         } else {
+          setHasEnrollment(false);
+          setLastAccessedRank(0);
           setIsCompleted(false);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (isMounted) setHasEnrollment(false);
+      });
 
     return () => {
       isMounted = false;
@@ -82,7 +86,9 @@ export function LearningView({
             );
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          if (isMounted) setMaterialsError("Lesson content is unavailable. Enroll in the course and complete earlier lessons to unlock it.");
+        });
 
       return () => {
         isMounted = false;
@@ -95,6 +101,8 @@ export function LearningView({
   const handleToggleComplete = async () => {
     try {
       await enrollmentsApi.completeLesson(lesson.id);
+      const currentRank = allLessons.findIndex((item) => item.id === lesson.id) + 1;
+      setLastAccessedRank((rank) => Math.max(rank, currentRank));
       setIsCompleted(true);
     } catch (err) {
       console.error("Failed to mark lesson complete via API", err);
@@ -120,14 +128,17 @@ export function LearningView({
           title: l.title,
           order_index: l.order_index || idx + 1,
           displayIndex: l.displayIndex,
-          is_locked: false,
+          is_locked: !hasEnrollment || idx + 1 > lastAccessedRank + 1,
         }))}
       />
+
+      {materialsError && <div role="alert" className="rounded-lg border border-destructive/30 bg-card p-3 text-sm text-destructive">{materialsError}</div>}
 
       {/* 2-Column MVP Learning Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Left Column: Material Reader & Discussion */}
         <LessonContentCard
+          lessonId={lesson.id}
           lessonIndex={lessonOrderIndex}
           lessonTitle={lesson.title}
           instructorName={instructor.name}
