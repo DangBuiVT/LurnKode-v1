@@ -86,7 +86,25 @@ describe('M1 + M2 Full Integration — Curriculum, Sequential Learning, Interact
     learnerHeaders = { 'content-type': 'application/json', authorization: `Bearer ${learnerToken}` };
   });
 
-  it('Edge: xóa lesson đang là bài gần nhất của học viên', async () => {
+  it('Leave course: learner can leave, then re-enroll', async () => {
+    const send = (method: string, path: string, headers: Record<string, string>, body?: unknown) =>
+      app.handle(new Request(`http://localhost${path}`, {
+        method, headers, body: body === undefined ? undefined : JSON.stringify(body),
+      }));
+
+    const course = ((await (await send('POST', '/api/v1/courses', inst1Headers, { title: 'Leave test' })).json()) as any).data;
+    await send('PATCH', `/api/v1/courses/${course.id}`, inst1Headers, { status: 'published' });
+
+    expect((await send('POST', `/api/v1/courses/${course.id}/enroll`, learnerHeaders)).status).toBe(201);
+    expect((await send('DELETE', `/api/v1/courses/${course.id}/enroll`, learnerHeaders)).status).toBe(204);
+    const again = await send('DELETE', `/api/v1/courses/${course.id}/enroll`, learnerHeaders);
+    expect(again.status).toBe(403);
+    expect(((await again.json()) as any).error.code).toBe('NOT_ENROLLED');
+    expect((await send('POST', `/api/v1/courses/${course.id}/enroll`, learnerHeaders)).status).toBe(201);
+    expect((await send('DELETE', `/api/v1/courses/${course.id}/enroll`, inst1Headers)).status).toBe(403);
+  });
+
+  it('Edge: delete last updated lesson of learner', async () => {
     const send = (method: string, path: string, headers: Record<string, string>, body?: unknown) =>
       app.handle(new Request(`http://localhost${path}`, {
         method, headers, body: body === undefined ? undefined : JSON.stringify(body),
