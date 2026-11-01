@@ -1,14 +1,5 @@
 # M3 Assessment Service — Interim Progress Report
 
-**Course:** Integration Project - Software Oriented (CO3103 · Semester 261)  
-**Institution:** Ho Chi Minh City University of Technology (HCMUT - VNU-HCM)  
-**Student:** Nguyễn Tất Đạt (ID: 2452248)  
-**Group:** Group 4 (Leader: Võ Lưu Thiên Phú)  
-**Module:** M3 — Assessment & Automated Code Grading Microservice (`apps/assessment-service`)  
-**Technology Stack:** Bun + ElysiaJS + TypeScript + PostgreSQL + Drizzle ORM + Redis / BullMQ  
-
----
-
 ## 1. Key Accomplishments
 
 1. **Assessment Authoring (Instructor):** Full support for Multiple-Choice Questions (MCQ) and Programming challenges with weighted test cases, execution limits (CPU, memory, timeout), and publishing validation.
