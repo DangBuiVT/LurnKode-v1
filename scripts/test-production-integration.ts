@@ -633,6 +633,22 @@ async function runIntegrationTests() {
     }
   }
 
+  // 6.5 Learner Leaves Course (DELETE /api/v1/courses/:id/enroll -> 204)
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/courses/${createdCourseId}/enroll`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${learnerToken}` },
+    });
+    logTest(
+      "6.5",
+      "Learner Leaves Course (DELETE /courses/:id/enroll -> 204)",
+      res.status === 204,
+      `HTTP Status: ${res.status}`
+    );
+  } catch (e: any) {
+    logTest("6.5", "Learner Leaves Course", false, e.message);
+  }
+
   // =========================================================================
   // TEST SUITE 7: M4 RAG AI TUTOR KNOWLEDGE INGESTION
   // =========================================================================

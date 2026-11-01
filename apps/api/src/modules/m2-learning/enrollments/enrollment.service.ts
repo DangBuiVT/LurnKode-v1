@@ -88,12 +88,31 @@ export const EnrollmentService = {
 
   // 2. GET /api/v1/my/enrollments
   async getMyEnrollments(learnerId: string) {
-    // TODO:
-    // Truy vấn danh sách enrollments của learnerId kèm thông tin course và lastAccessedLesson
-    return db.query.enrollments.findMany({
+    const list = await db.query.enrollments.findMany({
       where: eq(enrollments.learnerId, learnerId),
       with: { course: true, lastAccessedLesson: true },
     });
+
+    const enriched = await Promise.all(
+      list.map(async (item) => {
+        const ordered = await this.getOrderedCourseLessons(item.courseId);
+        const totalLessons = ordered.length;
+        const unlockedRank = item.lastAccessedLessonId
+          ? ordered.find((p) => p.lessons.id === item.lastAccessedLessonId)?.rank ?? 0
+          : 0;
+        const progress = totalLessons > 0 ? Math.round((unlockedRank / totalLessons) * 100) : 0;
+        const isCompleted = totalLessons > 0 && unlockedRank >= totalLessons;
+        return {
+          ...item,
+          totalLessons,
+          completedLessons: unlockedRank,
+          progress,
+          status: isCompleted ? ('completed' as const) : ('in_progress' as const),
+        };
+      })
+    );
+
+    return enriched;
   },
 
   // 3. GET /api/v1/lessons/:id/access (Constraint 4: Sequential Access Verification)

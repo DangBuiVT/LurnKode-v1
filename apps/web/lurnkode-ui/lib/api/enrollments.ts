@@ -6,8 +6,19 @@ export const enrollmentsApi = {
    * Ghi danh vào khóa học (Role: Learner)
    */
   async enroll(courseId: string): Promise<BackendEnrollment> {
-    return apiClient<BackendEnrollment>(`/api/v1/courses/${courseId}/enroll`, {
+    const cleanId = courseId.startsWith("c-") ? courseId.replace("c-", "") : courseId;
+    return apiClient<BackendEnrollment>(`/api/v1/courses/${cleanId}/enroll`, {
       method: "POST",
+    });
+  },
+
+  /**
+   * Rời khỏi khóa học (Role: Learner)
+   */
+  async unenroll(courseId: string): Promise<void> {
+    const cleanId = courseId.startsWith("c-") ? courseId.replace("c-", "") : courseId;
+    return apiClient<void>(`/api/v1/courses/${cleanId}/enroll`, {
+      method: "DELETE",
     });
   },
 

@@ -1,7 +1,5 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { mockDb } from "@/lib/db/mock-db";
-import { CURRENT_USER } from "@/lib/db/mock-data";
 import { enrollmentsApi, coursesApi } from "@/lib/api";
 import { fetchCourseById } from "@/data/courses";
 import { LearningView } from "./learning-view";
@@ -127,62 +125,8 @@ async function LearnLessonContent({ params }: PageProps) {
     );
   }
 
-  // 2. Fallback cho mockDb nếu API hoàn toàn không khả dụng
-  const course = mockDb.getCourseById(courseId);
-  if (!course) {
-    notFound();
-  }
-
-  const hierarchy = mockDb.getCourseHierarchy(course.id, CURRENT_USER.id);
-  if (!hierarchy) {
-    notFound();
-  }
-
-  const allLessons: Array<Lesson & { displayIndex: string }> = [];
-  let targetLesson: (Lesson & { displayIndex: string }) | undefined;
-
-  for (const ch of hierarchy.chapters) {
-    for (const les of ch.lessons) {
-      const lessonWithDisplay = {
-        ...les,
-        displayIndex: `${ch.order_index}.${les.order_index}`,
-      };
-      allLessons.push(lessonWithDisplay);
-      if (les.id === lessonId) {
-        targetLesson = lessonWithDisplay;
-      }
-    }
-  }
-
-  if (!targetLesson && allLessons.length > 0) {
-    targetLesson = allLessons[0];
-  }
-
-  if (!targetLesson) {
-    notFound();
-  }
-
-  const instructor =
-    mockDb.getUserById(course.instructor_id) || {
-      id: course.instructor_id,
-      name: "Instructor",
-      email: "instructor@lurnkode.edu",
-      role: "instructor" as const,
-      created_at: course.created_at,
-    };
-
-  const isCompleted = mockDb.isLessonCompleted(CURRENT_USER.id, course.id, targetLesson.id);
-
-  return (
-    <LearningView
-      course={course}
-      lesson={targetLesson}
-      instructor={instructor}
-      materials={[]}
-      allLessons={allLessons}
-      initialIsCompleted={isCompleted}
-    />
-  );
+  // Khóa học không tồn tại trên hệ thống
+  notFound();
 }
 
 export default function LearnLessonPage({ params }: PageProps) {

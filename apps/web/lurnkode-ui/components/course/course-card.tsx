@@ -13,8 +13,8 @@ interface CourseCardProps {
 }
 
 export function CourseCard({ course, onEnroll, onResume, onLeave }: CourseCardProps) {
-  const isEnrolled = course.status === "in_progress";
-  const isCompleted = course.status === "completed";
+  const isCompleted = course.status === "completed" || (course.progress ?? 0) >= 100;
+  const isEnrolled = !isCompleted && (course.status === "in_progress" || course.status !== "not_enrolled");
   const courseUrl = `/course/${course.id}`;
 
   const handleAction = () => {
@@ -153,10 +153,15 @@ export function CourseCard({ course, onEnroll, onResume, onLeave }: CourseCardPr
                       <BookOpen className="mr-1 size-3.5" />
                       Review
                     </>
-                  ) : (
+                  ) : (course.progress || 0) > 0 ? (
                     <>
                       <PlayCircle className="mr-1 size-3.5" />
                       Resume
+                    </>
+                  ) : (
+                    <>
+                      <PlayCircle className="mr-1 size-3.5" />
+                      Start
                     </>
                   )}
                 </Button>

@@ -6,8 +6,6 @@ import { ChapterSection } from "@/components/course/chapter-section";
 import { LeaveCourseDialog } from "@/components/course/leave-course-dialog";
 import { CourseDetail, Chapter, Lesson } from "@/types/course";
 import { Button } from "@/components/ui/button";
-import { mockDb } from "@/lib/db/mock-db";
-import { CURRENT_USER } from "@/lib/db/mock-data";
 import { coursesApi, enrollmentsApi, adaptBackendCourseDetail } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { PlayCircle, BookOpen, LogOut, CheckCircle2, X, Loader2 } from "lucide-react";
@@ -112,6 +110,13 @@ export function CourseDetailContent({ course }: CourseDetailContentProps) {
           } else {
             setProgress(0);
           }
+        } else {
+          setIsEnrolledState(false);
+          setProgress(0);
+          if (rawDetail) {
+            const adapted = adaptBackendCourseDetail(rawDetail, null);
+            setChapters(adapted.chapters);
+          }
         }
       } catch (err) {
         console.error("Failed to query live enrollment status", err);
@@ -181,9 +186,7 @@ export function CourseDetailContent({ course }: CourseDetailContentProps) {
         setIsEnrolledState(true);
         setNotification("You are already enrolled in this course.");
       } else {
-        mockDb.enrollCourse(CURRENT_USER.id, course.id);
-        setIsEnrolledState(true);
-        setNotification("Successfully enrolled in this course! Happy learning.");
+        setNotification(errorMsg || "Failed to enroll in this course. Please try again.");
       }
     } finally {
       setIsLoadingEnrollment(false);
@@ -191,10 +194,10 @@ export function CourseDetailContent({ course }: CourseDetailContentProps) {
     }
   };
 
-  const handleConfirmLeave = () => {
-    setIsLeaving(true);
-    setTimeout(() => {
-      mockDb.unenrollCourse(CURRENT_USER.id, course.id);
+  const handleConfirmLeave = async () => {
+    try {
+      setIsLeaving(true);
+      await enrollmentsApi.unenroll(course.id);
       setIsEnrolledState(false);
       setProgress(0);
       setChapters((prev) =>
@@ -205,10 +208,14 @@ export function CourseDetailContent({ course }: CourseDetailContentProps) {
         }))
       );
       setIsLeaveDialogOpen(false);
-      setIsLeaving(false);
       setNotification(`You have left "${course.title}". You can re-enroll at any time.`);
+    } catch (err) {
+      console.error("Failed to leave course via API", err);
+      setNotification("Failed to leave course. Please try again.");
+    } finally {
+      setIsLeaving(false);
       setTimeout(() => setNotification(null), 4000);
-    }, 300);
+    }
   };
 
   const handleResume = () => {
@@ -273,8 +280,18 @@ export function CourseDetailContent({ course }: CourseDetailContentProps) {
                   onClick={handleResume}
                   className="gap-1.5 text-xs font-semibold shadow-xs"
                 >
-                  <PlayCircle className="h-4 w-4" />
-                  <span>Continue Learning</span>
+                  {progress >= 100 ? (
+                    <BookOpen className="h-4 w-4" />
+                  ) : (
+                    <PlayCircle className="h-4 w-4" />
+                  )}
+                  <span>
+                    {progress >= 100
+                      ? "Review Course"
+                      : progress > 0
+                      ? "Continue Learning"
+                      : "Start Learning"}
+                  </span>
                 </Button>
               </>
             ) : (

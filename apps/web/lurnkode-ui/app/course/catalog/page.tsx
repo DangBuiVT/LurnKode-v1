@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Filter,
@@ -13,8 +14,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { fetchCourses } from "@/data/courses";
-import { mockDb, CURRENT_USER } from "@/lib/db";
 import { enrollmentsApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { CourseGrid } from "@/components/course/course-grid";
 import { LeaveCourseDialog } from "@/components/course/leave-course-dialog";
 import { Pagination } from "@/components/ui/pagination";
@@ -25,6 +26,8 @@ type StatusFilter = "all" | CourseStatus;
 type SortOption = "newest" | "title_asc" | "title_desc" | "progress_desc";
 
 export default function CourseCatalogPage() {
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,15 +47,25 @@ export default function CourseCatalogPage() {
 
   // Load courses dynamically from M2 Backend API
   useEffect(() => {
+    let isMounted = true;
+
     fetchCourses()
       .then((data) => {
-        setCourses(data || []);
+        if (isMounted) {
+          setCourses(data || []);
+        }
       })
       .catch(() => {})
       .finally(() => {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       });
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, isAuthenticated]);
 
   // Extract unique instructors and categories
   const instructors = useMemo(() => {
@@ -193,43 +206,56 @@ export default function CourseCatalogPage() {
     sortBy !== "newest";
 
   const handleEnroll = async (courseId: string) => {
-    try {
-      await enrollmentsApi.enroll(courseId);
-    } catch {
-      // Fallback local db khi backend offline hoặc test
-      const dbCourseId = courseId.startsWith("c-") ? courseId : `c-${courseId}`;
-      mockDb.enrollCourse(CURRENT_USER.id, dbCourseId);
+    if (!isAuthenticated) {
+      router.push(`/login?redirect=/course/catalog`);
+      return;
     }
 
-    setCourses((prev) =>
-      prev.map((c) =>
-        c.id === courseId
-          ? { ...c, status: "in_progress" as const, progress: 0 }
-          : c,
-      ),
-    );
+    if (user?.role === "Instructor") {
+      setNotification("Instructors cannot enroll as learners. You can manage courses in Creator Studio.");
+      setTimeout(() => setNotification(null), 4000);
+      return;
+    }
 
-    const target = courses.find((c) => c.id === courseId);
-    if (target) {
-      setNotification(`Successfully enrolled in "${target.title}".`);
+    try {
+      await enrollmentsApi.enroll(courseId);
+      setCourses((prev) =>
+        prev.map((c) =>
+          c.id === courseId
+            ? { ...c, status: "in_progress" as const, progress: 0 }
+            : c,
+        ),
+      );
+
+      const target = courses.find((c) => c.id === courseId);
+      if (target) {
+        setNotification(`Successfully enrolled in "${target.title}".`);
+        setTimeout(() => setNotification(null), 4000);
+      }
+    } catch (err: unknown) {
+      const errorMsg = (err as Error)?.message || "";
+      setNotification(errorMsg || "Failed to enroll in this course. Please try again.");
       setTimeout(() => setNotification(null), 4000);
     }
   };
 
   const handleOpenLeave = (courseId: string) => {
+    if (!isAuthenticated) {
+      router.push(`/login?redirect=/course/catalog`);
+      return;
+    }
     const target = courses.find((c) => c.id === courseId);
     if (target) {
       setLeavingCourse(target);
     }
   };
 
-  const handleConfirmLeave = () => {
+  const handleConfirmLeave = async () => {
     if (!leavingCourse) return;
     setIsLeaving(true);
 
-    setTimeout(() => {
-      mockDb.unenrollCourse(CURRENT_USER.id, leavingCourse.id);
-
+    try {
+      await enrollmentsApi.unenroll(leavingCourse.id);
       setCourses((prev) =>
         prev.map((c) =>
           c.id === leavingCourse.id
@@ -240,17 +266,18 @@ export default function CourseCatalogPage() {
 
       const title = leavingCourse.title;
       setLeavingCourse(null);
-      setIsLeaving(false);
       setNotification(`Successfully left course "${title}".`);
+    } catch (err) {
+      console.error("Failed to unenroll via API", err);
+      setNotification("Failed to leave course. Please try again.");
+    } finally {
+      setIsLeaving(false);
       setTimeout(() => setNotification(null), 4000);
-    }, 300);
+    }
   };
 
   const handleResume = (courseId: string) => {
-    const target = courses.find((c) => c.id === courseId);
-    if (target) {
-      alert(`Resuming course: "${target.title}"`);
-    }
+    router.push(`/course/${courseId}`);
   };
 
   return (
