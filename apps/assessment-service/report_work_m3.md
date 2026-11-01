@@ -1,18 +1,23 @@
 # M3 Assessment Service — Interim Progress Report
 
-
+**Course:** Integration Project - Software Oriented (CO3103 · Semester 261)  
+**Institution:** Ho Chi Minh City University of Technology (HCMUT - VNU-HCM)  
+**Student:** Nguyễn Tất Đạt (ID: 2452248)  
+**Group:** Group 4 (Leader: Võ Lưu Thiên Phú)  
+**Module:** M3 — Assessment & Automated Code Grading Microservice (`apps/assessment-service`)  
+**Technology Stack:** Bun + ElysiaJS + TypeScript + PostgreSQL + Drizzle ORM + Redis / BullMQ  
 
 ---
 
 ## 1. Key Accomplishments
 
 1. **Assessment Authoring (Instructor):** Full support for Multiple-Choice Questions (MCQ) and Programming challenges with weighted test cases, execution limits (CPU, memory, timeout), and publishing validation.
-2. **Anti-Cheating Data Sanitization:** `mapItemForLearner` strips `correctOptionIds` and hidden test cases before payloads reach the learner browser.
+2. **Anti-Cheating Data Sanitization:** `mapItemForLearner` strictly strips `correctOptionIds` and hidden test cases before payloads reach the learner browser.
 3. **Dual-Engine Automated Grading:**
    - **MCQ (Synchronous):** Instant evaluation via `gradeMcq()` returning immediate points.
    - **Code (Asynchronous):** Non-blocking submission (`202 Accepted`), attempt state holds in `grading` until M6 judge callback calculates partial credit (`AC`, `WA`, `TLE`, `MLE`, `RE`/`RTE`, `CE`) and marks attempt `completed`.
-4. **Security Hardening:** Enforced role-based access control (401/403), timing-safe token verification (`timingSafeEqual`), and production environment guards.
-5. **Interactive Demo Tools:** Built-in auto-seeding on server startup and CLI fake judge runner (`bun run fake-judge <submissionId> [verdict]`).
+4. **Security & Resilient Inter-Service RBAC:** Enforced role-based access control (401/403), timing-safe token verification (`timingSafeEqual`), and development fallback handlers for unrouted M2 internal calls.
+5. **Interactive Demo & Verification Harness:** Built-in auto-seeding on server startup and CLI fake judge runner (`bun run fake-judge <submissionId> [verdict]`).
 
 ---
 
@@ -21,13 +26,14 @@
 ```text
 bun test (native runner)
 ✅ 38 tests PASSED (0 failures, 106 assertions)
-⚡ Execution time: 145 ms
+⚡ Execution time: ~270 ms
 🛡️ TypeScript Typecheck: 0 errors across 32 files
+📦 Container: oven/bun:1.2.4-alpine (Production ready, Healthchecked)
 ```
 
 ---
 
-## 3. API Surface
+## 3. API Surface & Architecture
 
 | Role | Method | Endpoint | Purpose |
 |---|---|---|---|
