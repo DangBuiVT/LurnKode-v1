@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
       },
     },
   },
-  output: "standalone",
+  /* output: "standalone", */
   async redirects() {
     return [
       {
